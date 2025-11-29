@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tenant Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <div class="max-w-5xl mx-auto py-8">
+    <header class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-slate-800">Find a place</h1>
+      <div class="flex items-center gap-3">
+        <p id="welcome" class="text-sm text-slate-700"></p>
+        <button id="logoutBtn"
+          class="px-4 py-2 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-900 transition">
+          Log out
+        </button>
+      </div>
+    </header>
+
+    <section class="mb-4">
+      <p id="statusMessage" class="text-sm text-slate-600"></p>
+    </section>
+
+    <section class="grid md:grid-cols-[1.1fr_2fr] gap-6">
+      <div class="bg-white rounded-2xl shadow p-5 space-y-3">
+        <h2 class="text-lg font-semibold text-slate-800 mb-2">Filters</h2>
+
+        <div class="space-y-2">
+          <input id="filterCity" type="text" placeholder="City"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+
+          <div class="flex gap-2">
+            <input id="filterMinPrice" type="number" placeholder="Min price"
+              class="w-1/2 px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input id="filterMaxPrice" type="number" placeholder="Max price"
+              class="w-1/2 px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+
+          <div class="flex flex-wrap gap-3 text-sm text-slate-700 mt-1">
+            <label class="inline-flex items-center gap-1">
+              <input id="filterWifi" type="checkbox" class="rounded border-slate-300" />
+              <span>Wi-Fi 📶</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="filterPets" type="checkbox" class="rounded border-slate-300" />
+              <span>Pets 🐾</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="filterFurnished" type="checkbox" class="rounded border-slate-300" />
+              <span>Furnished 🛋️</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="filterActive" type="checkbox" class="rounded border-slate-300" checked />
+              <span>Only active</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button id="applyFiltersBtn"
+            class="flex-1 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+            Apply filters
+          </button>
+          <button id="resetFiltersBtn"
+            class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm hover:bg-slate-50 transition">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-semibold text-slate-800">Listings</h2>
+          <span id="resultsCounter" class="text-xs text-slate-500"></span>
+        </div>
+        <div id="listingsContainer" class="space-y-3 text-sm text-slate-700">
+          Loading...
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  let currentUser = null;
+
+  const statusEl = document.getElementById("statusMessage");
+  const listingsContainer = document.getElementById("listingsContainer");
+  const resultsCounter = document.getElementById("resultsCounter");
+
+  function setStatus(text, isError = false) {
+    statusEl.textContent = text || "";
+    statusEl.className =
+      "text-sm mt-1 " + (isError ? "text-red-600" : "text-slate-600");
+  }
+
+  window.addEventListener("load", () => {
+    init().catch(e => {
+      console.error("tenant init error", e);
+      setStatus("Init error: " + (e.message || e), true);
+    });
+  });
+
+  async function init() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data || !data.user) {
+      window.location.href = "index.html";
+      return;
+    }
+    currentUser = data.user;
+
+    const welcomeEl = document.getElementById("welcome");
+    if (welcomeEl) {
+      welcomeEl.textContent = `Logged in as ${currentUser.email}`;
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "index.html";
+    });
+
+    document.getElementById("applyFiltersBtn").addEventListener("click", () => {
+      loadListings().catch(e => {
+        console.error("loadListings error", e);
+        setStatus("Error loading listings: " + (e.message || e), true);
+      });
+    });
+
+    document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+      resetFilters();
+      loadListings().catch(e => {
+        console.error("loadListings error", e);
+        setStatus("Error loading listings: " + (e.message || e), true);
+      });
+    });
+
+    await loadListings();
+  }
+
+  function resetFilters() {
+    document.getElementById("filterCity").value = "";
+    document.getElementById("filterMinPrice").value = "";
+    document.getElementById("filterMaxPrice").value = "";
+    document.getElementById("filterWifi").checked = false;
+    document.getElementById("filterPets").checked = false;
+    document.getElementById("filterFurnished").checked = false;
+    document.getElementById("filterActive").checked = true;
+    setStatus("");
+  }
+
+  async function loadListings() {
+    setStatus("Loading listings...", false);
+    listingsContainer.textContent = "Loading...";
+
+    const city = document.getElementById("filterCity").value.trim();
+    const minPriceVal = document.getElementById("filterMinPrice").value.trim();
+    const maxPriceVal = document.getElementById("filterMaxPrice").value.trim();
+    const wifi = document.getElementById("filterWifi").checked;
+    const pets = document.getElementById("filterPets").checked;
+    const furnished = document.getElementById("filterFurnished").checked;
+    const onlyActive = document.getElementById("filterActive").checked;
+
+    let query = supabase
+      .from("listing")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (onlyActive) {
+      query = query.eq("is_active", true);
+    }
+    if (city) {
+      query = query.ilike("city", "%" + city + "%");
+    }
+
+    if (minPriceVal) {
+      const minPrice = parseInt(minPriceVal, 10);
+      if (!Number.isNaN(minPrice)) {
+        query = query.gte("price_per_month", minPrice);
+      }
+    }
+
+    if (maxPriceVal) {
+      const maxPrice = parseInt(maxPriceVal, 10);
+      if (!Number.isNaN(maxPrice)) {
+        query = query.lte("price_per_month", maxPrice);
+      }
+    }
+
+    if (wifi) {
+      query = query.eq("has_wifi", true);
+    }
+    if (pets) {
+      query = query.eq("allow_pets", true);
+    }
+    if (furnished) {
+      query = query.eq("is_furnished", true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("loadListings error", error);
+      listingsContainer.textContent =
+        error.message || "Error loading listings.";
+      setStatus("Error loading listings.", true);
+      resultsCounter.textContent = "";
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      listingsContainer.textContent = "Nothing found for current filters.";
+      setStatus("No listings match your filters.", false);
+      resultsCounter.textContent = "0 results";
+      return;
+    }
+
+    listingsContainer.innerHTML = "";
+    resultsCounter.textContent = `${data.length} result${data.length === 1 ? "" : "s"}`;
+    setStatus("", false);
+
+    data.forEach(item => {
+      const div = document.createElement("div");
+      div.className =
+        "border rounded-xl p-3 flex gap-3 items-center cursor-pointer hover:bg-slate-50";
+
+      const thumbHtml = item.main_photo_url
+        ? `<img src="${item.main_photo_url}" alt="photo"
+                 class="w-20 h-20 object-cover rounded-lg border" />`
+        : `<div class="w-20 h-20 rounded-lg border bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
+             no photo
+           </div>`;
+
+      const tags = [];
+      if (item.has_wifi) tags.push("📶 Wi-Fi");
+      if (item.allow_pets) tags.push("🐾 Pets");
+      if (item.is_furnished) tags.push("🛋️ Furnished");
+      if (item.is_active === false) tags.push("⛔ Inactive");
+
+      div.innerHTML = `
+        ${thumbHtml}
+        <div class="flex-1">
+          <div class="font-semibold">
+            ${item.title || "(no title)"} — ${item.city || ""}
+          </div>
+          <div class="text-sm text-slate-700">
+            ${item.price_per_month != null ? item.price_per_month + " / month" : ""}
+          </div>
+          <div class="text-xs text-slate-500 truncate mt-1">
+            ${item.description || ""}
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1">
+            ${tags.join(" • ")}
+          </div>
+        </div>
+      `;
+
+      div.addEventListener("click", () => {
+        window.location.href = "listing-details.html?id=" + item.id;
+      });
+
+      listingsContainer.appendChild(div);
+    });
+  }
+</script>
+</body>
+</html>

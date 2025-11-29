@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Listing details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <div class="max-w-4xl mx-auto py-8">
+    <header class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-slate-800">Listing details</h1>
+      <a href="javascript:history.back()"
+         class="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition">
+        Back
+      </a>
+    </header>
+
+    <section id="status" class="mb-4 text-sm text-slate-600">
+      Loading listing...
+    </section>
+
+    <section id="content" class="bg-white rounded-2xl shadow p-6 space-y-6 hidden">
+      <div>
+        <h2 id="title" class="text-2xl font-semibold text-slate-900"></h2>
+        <p id="city" class="text-slate-700"></p>
+        <p id="price" class="text-lg font-semibold text-emerald-700 mt-2"></p>
+        <p id="flags" class="text-sm text-slate-600 mt-1"></p>
+      </div>
+
+      <div>
+        <h3 class="text-lg font-semibold mb-2">Description</h3>
+        <p id="description" class="text-slate-700 whitespace-pre-line"></p>
+      </div>
+
+      <div id="photosBlock">
+        <h3 class="text-lg font-semibold mb-2">Photos</h3>
+        <div id="photos" class="flex flex-wrap gap-3"></div>
+        <p id="noPhotos" class="text-sm text-slate-500 hidden">No photos.</p>
+      </div>
+
+      <div>
+        <h3 class="text-lg font-semibold mb-2">Contact landlord</h3>
+        <p class="text-sm text-slate-600 mb-2">
+          Your message will be delivered via the platform. Landlord email is not shown.
+        </p>
+        <textarea id="contactMessage" rows="3"
+          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2"
+          placeholder="Write your message..."></textarea>
+        <input id="contactEmail" type="email"
+          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2"
+          placeholder="Your email (optional if you are logged in, required if not)" />
+        <button id="sendMessageBtn"
+          class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+          Send message
+        </button>
+        <p id="contactStatus" class="text-sm mt-2"></p>
+      </div>
+
+      <div class="text-xs text-slate-400">
+        <span id="meta"></span>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  const statusEl = document.getElementById("status");
+  const contentEl = document.getElementById("content");
+  const contactStatusEl = document.getElementById("contactStatus");
+
+  let currentUser = null;
+  let currentListingId = null;
+  let currentOwnerId = null;
+
+  function setStatus(text, isError = false) {
+    statusEl.textContent = text;
+    statusEl.className =
+      "mb-4 text-sm " + (isError ? "text-red-600" : "text-slate-600");
+  }
+
+  function setContactStatus(text, isError = false) {
+    contactStatusEl.textContent = text || "";
+    contactStatusEl.className =
+      "text-sm mt-2 " + (isError ? "text-red-600" : "text-emerald-600");
+  }
+
+  window.addEventListener("load", () => {
+    init().catch(e => {
+      console.error("listing init error", e);
+      setStatus("Error: " + (e.message || e), true);
+    });
+  });
+
+  async function init() {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data && data.user) {
+        currentUser = data.user;
+      }
+    } catch (e) {
+      console.warn("getUser failed", e);
+    }
+
+    await loadListing();
+
+    const btn = document.getElementById("sendMessageBtn");
+    btn.addEventListener("click", () => {
+      sendMessage().catch(e => {
+        console.error("sendMessage error", e);
+        setContactStatus("Error sending message: " + (e.message || e), true);
+      });
+    });
+  }
+
+  async function loadListing() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    if (!id) {
+      setStatus("No listing id in URL.", true);
+      return;
+    }
+
+    setStatus("Loading listing...", false);
+
+    const { data, error } = await supabase
+      .from("listing")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("select error", error);
+      setStatus(error.message || "Error loading listing.", true);
+      return;
+    }
+
+    if (!data) {
+      setStatus("Listing not found.", true);
+      return;
+    }
+
+    currentListingId = data.id;
+    currentOwnerId = data.owner_id || null;
+
+    document.getElementById("title").textContent = data.title || "(no title)";
+    document.getElementById("city").textContent = data.city || "";
+    document.getElementById("price").textContent =
+      (data.price_per_month != null ? data.price_per_month + " / month" : "");
+
+    const flags = [];
+    if (data.has_wifi) flags.push("📶 Wi-Fi");
+    if (data.allow_pets) flags.push("🐾 Pets allowed");
+    if (data.is_furnished) flags.push("🛋️ Furnished");
+    if (data.is_active === false) flags.push("⛔ Inactive listing");
+    document.getElementById("flags").textContent = flags.join(" • ");
+
+    document.getElementById("description").textContent =
+      data.description || "";
+
+    document.getElementById("meta").textContent =
+      "id: " + data.id +
+      (data.created_at ? " • created at: " + data.created_at : "") +
+      (data.owner_id ? " • owner_id: " + data.owner_id : "");
+
+    const urls = [
+      data.main_photo_url,
+      data.photo2_url,
+      data.photo3_url,
+      data.photo4_url,
+    ].filter(u => !!u);
+
+    const photosEl = document.getElementById("photos");
+    const noPhotosEl = document.getElementById("noPhotos");
+
+    if (!urls.length) {
+      photosEl.innerHTML = "";
+      noPhotosEl.classList.remove("hidden");
+    } else {
+      noPhotosEl.classList.add("hidden");
+      photosEl.innerHTML = "";
+
+      urls.forEach((url, idx) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "relative";
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.title = idx === 0 ? "Main photo (open full image in new tab)" : "Open full image in new tab";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "photo " + (idx + 1);
+        img.className = "w-32 h-32 object-cover rounded-xl border";
+
+        a.appendChild(img);
+        wrapper.appendChild(a);
+
+        if (idx === 0) {
+          const badge = document.createElement("div");
+          badge.textContent = "Main";
+          badge.className =
+            "absolute top-1 left-1 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded-full";
+          wrapper.appendChild(badge);
+        }
+
+        photosEl.appendChild(wrapper);
+      });
+    }
+
+    setStatus("", false);
+    contentEl.classList.remove("hidden");
+  }
+
+  async function sendMessage() {
+    setContactStatus("");
+
+    if (!currentListingId) {
+      setContactStatus("Listing not loaded.", true);
+      return;
+    }
+
+    const text = document.getElementById("contactMessage").value.trim();
+    const emailInput = document.getElementById("contactEmail").value.trim();
+
+    if (!text) {
+      setContactStatus("Message text is required.", true);
+      return;
+    }
+
+    if (!currentUser && !emailInput) {
+      setContactStatus("Please log in or provide your email.", true);
+      return;
+    }
+
+    const payload = {
+      listing_id: currentListingId,
+      message: text,
+      tenant_id: currentUser ? currentUser.id : null,
+      tenant_email: currentUser ? currentUser.email : (emailInput || null),
+    };
+
+    setContactStatus("Sending...", false);
+
+    const { error } = await supabase
+      .from("messages")
+      .insert([payload]);
+
+    if (error) {
+      console.error("insert message error", error);
+      setContactStatus(error.message || "Failed to send message.", true);
+      return;
+    }
+
+    document.getElementById("contactMessage").value = "";
+    setContactStatus("Message sent successfully.", false);
+  }
+</script>
+</body>
+</html>
