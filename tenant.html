@@ -11,11 +11,11 @@
     <header class="flex justify-between items-center mb-8">
       <div>
         <h1 class="text-3xl font-bold text-slate-800">Find your home</h1>
-        <p id="welcomeUser" class="text-slate-500 text-sm">Welcome back</p>
+        <p id="welcomeUser" class="text-slate-500 text-sm">Welcome</p>
       </div>
-      <div class="flex gap-3">
-        <a href="landlord.html" class="px-4 py-2 text-sm text-slate-600 hover:text-emerald-600 font-semibold transition">
-          Are you a Landlord?
+      <div>
+        <a id="dashboardBtn" href="landlord.html" class="hidden px-4 py-2 text-sm text-emerald-600 font-semibold hover:underline">
+          Go to Dashboard
         </a>
         <button id="logoutBtn"
           class="px-4 py-2 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-900 transition">
@@ -26,48 +26,30 @@
 
     <div class="grid md:grid-cols-4 gap-6">
       <aside class="bg-white p-5 rounded-2xl shadow h-fit">
-        <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
-          Filters
-          <button id="resetFilters" class="text-xs text-emerald-600 font-normal hover:underline">Reset</button>
+        <h2 class="font-semibold text-lg mb-4 flex justify-between">
+          Filters <button id="resetFilters" class="text-xs text-emerald-600 font-normal">Reset</button>
         </h2>
-        
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">City</label>
-            <input id="filterCity" type="text" placeholder="e.g. New York"
-              class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <label class="text-xs font-bold text-slate-500 uppercase">City</label>
+            <input id="filterCity" type="text" placeholder="New York" class="w-full px-3 py-2 border rounded-xl text-sm mt-1" />
           </div>
-
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Max Price</label>
-            <input id="filterMaxPrice" type="number" placeholder="Any"
-              class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+             <label class="text-xs font-bold text-slate-500 uppercase">Max Price</label>
+             <input id="filterMaxPrice" type="number" placeholder="Any" class="w-full px-3 py-2 border rounded-xl text-sm mt-1" />
           </div>
-
           <div class="space-y-2 pt-2 border-t">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input id="filterWifi" type="checkbox" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span class="text-sm text-slate-700">Must have Wi-Fi</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input id="filterPets" type="checkbox" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span class="text-sm text-slate-700">Pets Allowed</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input id="filterFurnished" type="checkbox" class="rounded text-emerald-600 focus:ring-emerald-500" />
-              <span class="text-sm text-slate-700">Furnished</span>
-            </label>
+            <label class="flex items-center gap-2"><input id="filterWifi" type="checkbox"> <span class="text-sm">Wi-Fi</span></label>
+            <label class="flex items-center gap-2"><input id="filterPets" type="checkbox"> <span class="text-sm">Pets</span></label>
+            <label class="flex items-center gap-2"><input id="filterFurnished" type="checkbox"> <span class="text-sm">Furnished</span></label>
           </div>
-
-          <button id="applyFiltersBtn" class="w-full py-2 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition">
-            Apply Filters
-          </button>
+          <button id="applyFiltersBtn" class="w-full py-2 bg-emerald-600 text-white rounded-xl font-semibold mt-2">Apply</button>
         </div>
       </aside>
 
       <main class="md:col-span-3">
         <div id="listingsContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <p class="text-slate-500">Loading listings...</p>
+          <p class="text-slate-500">Loading...</p>
         </div>
       </main>
     </div>
@@ -78,118 +60,81 @@
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  let currentUser = null;
-
   window.addEventListener("load", async () => {
-    // Check Auth
-    const { data } = await supabase.auth.getUser();
-    if (data?.user) {
-      currentUser = data.user;
-      document.getElementById("welcomeUser").textContent = `Logged in as ${currentUser.email}`;
+    // 1. Auth check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      document.getElementById("welcomeUser").textContent = `Logged in as ${user.email}`;
+      
+      // Проверяем роль, чтобы показать кнопку "Go to Dashboard" только лендлордам
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      if (profile && profile.role === 'landlord') {
+         document.getElementById("dashboardBtn").classList.remove("hidden");
+      }
     } else {
-      // If you want to force login: window.location.href = "index.html";
-      document.getElementById("welcomeUser").textContent = "Guest mode (Log in to contact)";
+       // Если не залогинен, можно редиректить или оставить как гостя
+       document.getElementById("welcomeUser").textContent = "Guest";
     }
 
-    // Logout logic
+    // 2. Logout fix
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await supabase.auth.signOut();
       window.location.href = "index.html";
     });
 
-    // Filters logic
-    document.getElementById("applyFiltersBtn").addEventListener("click", loadListings);
-    document.getElementById("resetFilters").addEventListener("click", () => {
+    // 3. Filters
+    document.getElementById("applyFiltersBtn").onclick = loadListings;
+    document.getElementById("resetFilters").onclick = () => {
        document.getElementById("filterCity").value = "";
        document.getElementById("filterMaxPrice").value = "";
-       document.getElementById("filterWifi").checked = false;
-       document.getElementById("filterPets").checked = false;
-       document.getElementById("filterFurnished").checked = false;
+       ['filterWifi','filterPets','filterFurnished'].forEach(id=>document.getElementById(id).checked=false);
        loadListings();
-    });
+    };
 
-    // Initial Load
-    await loadListings();
+    loadListings();
   });
 
   async function loadListings() {
     const container = document.getElementById("listingsContainer");
-    container.innerHTML = '<p class="text-slate-500 col-span-full text-center py-10">Searching...</p>';
+    container.innerHTML = '<p class="text-slate-500">Searching...</p>';
 
-    // Get filter values
+    let query = supabase.from("listing").select("*").eq("is_active", true).order("created_at", { ascending: false });
+
     const city = document.getElementById("filterCity").value.trim();
+    if (city) query = query.ilike("city", `%${city}%`);
+    
     const maxPrice = document.getElementById("filterMaxPrice").value;
-    const wifi = document.getElementById("filterWifi").checked;
-    const pets = document.getElementById("filterPets").checked;
-    const furnished = document.getElementById("filterFurnished").checked;
+    if (maxPrice) query = query.lte("price_per_month", parseInt(maxPrice));
 
-    // Build Query
-    let query = supabase
-      .from("listing")
-      .select("*")
-      .eq("is_active", true) // Only show active listings by default
-      .order("created_at", { ascending: false });
-
-    if (city) {
-      query = query.ilike("city", `%${city}%`);
-    }
-    if (maxPrice) {
-      query = query.lte("price_per_month", parseInt(maxPrice));
-    }
-    if (wifi) query = query.eq("has_wifi", true);
-    if (pets) query = query.eq("allow_pets", true);
-    if (furnished) query = query.eq("is_furnished", true);
+    if (document.getElementById("filterWifi").checked) query = query.eq("has_wifi", true);
+    if (document.getElementById("filterPets").checked) query = query.eq("allow_pets", true);
+    if (document.getElementById("filterFurnished").checked) query = query.eq("is_furnished", true);
 
     const { data, error } = await query;
-
-    if (error) {
-      console.error(error);
-      container.innerHTML = `<p class="text-red-500">Error loading listings.</p>`;
-      return;
+    
+    if (error || !data.length) {
+       container.innerHTML = '<p class="text-slate-500 col-span-full">No listings found.</p>';
+       return;
     }
 
-    if (!data || data.length === 0) {
-      container.innerHTML = `<p class="text-slate-500 col-span-full text-center py-10">No listings found matching your criteria.</p>`;
-      return;
-    }
-
-    // Render
     container.innerHTML = "";
     data.forEach(item => {
       const card = document.createElement("div");
       card.className = "bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden group";
+      const img = item.main_photo_url || "https://via.placeholder.com/400x300";
       
-      const price = item.price_per_month.toLocaleString();
-      const imgUrl = item.main_photo_url || "https://via.placeholder.com/400x300?text=No+Photo";
-
-      // Badges
-      let badges = "";
-      if (item.has_wifi) badges += `<span class="text-[10px] bg-slate-100 px-2 py-1 rounded-full">Wi-Fi</span>`;
-      if (item.allow_pets) badges += `<span class="text-[10px] bg-slate-100 px-2 py-1 rounded-full">Pets</span>`;
-
       card.innerHTML = `
         <div class="h-48 overflow-hidden bg-slate-200 relative">
-          <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="${item.title}">
-          <div class="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded-lg text-xs font-bold">
-            $${price} / mo
-          </div>
+          <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition">
+          <div class="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded-lg text-xs font-bold">$${item.price_per_month}/mo</div>
         </div>
         <div class="p-4">
           <h3 class="font-bold text-slate-800 truncate">${item.title}</h3>
-          <p class="text-sm text-slate-500 mb-3">${item.city}</p>
-          <div class="flex gap-2 flex-wrap mb-3">
-             ${badges}
-          </div>
-          <button class="w-full py-2 rounded-xl border border-emerald-600 text-emerald-600 font-semibold hover:bg-emerald-50 transition text-sm">
-            View Details
-          </button>
+          <p class="text-sm text-slate-500 mb-2">${item.city}</p>
+          <button class="w-full py-2 rounded-xl border border-emerald-600 text-emerald-600 text-sm font-semibold hover:bg-emerald-50">View Details</button>
         </div>
       `;
-
-      card.addEventListener("click", () => {
-        window.location.href = `listing-details.html?id=${item.id}`;
-      });
-
+      card.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
       container.appendChild(card);
     });
   }
