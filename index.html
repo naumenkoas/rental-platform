@@ -23,3 +23,130 @@
       <button type="submit"
         class="w-full px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
         Sign in
+      </button>
+    </form>
+
+    <p class="text-xs text-slate-600 mt-4 text-center">
+      No account?
+      <a href="register.html"
+         class="text-emerald-700 font-semibold hover:underline">
+        Sign up
+      </a>
+    </p>
+  </div>
+
+<script>
+  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  const statusEl   = document.getElementById("status");
+  const formEl     = document.getElementById("loginForm");
+  const emailInput = document.getElementById("email");
+  const passInput  = document.getElementById("password");
+
+  function setStatus(text, isError = false) {
+    statusEl.textContent = text || "";
+    statusEl.className =
+      "text-sm mb-3 " + (isError ? "text-red-600" : "text-slate-600");
+  }
+
+  // При загрузке страницы: сначала проверяем, есть ли уже залогиненный пользователь
+  window.addEventListener("load", () => {
+    checkExistingSession().catch(err => {
+      console.error("checkExistingSession error", err);
+      // Если что-то пошло не так, хотя бы покажем форму логина
+      formEl.classList.remove("hidden");
+      setStatus("");
+    });
+
+    // Обработчик логина
+    formEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await handleLogin();
+    });
+  });
+
+  async function checkExistingSession() {
+    setStatus("Checking session...");
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data || !data.user) {
+      // Сессии нет — показываем форму
+      formEl.classList.remove("hidden");
+      setStatus("");
+      return;
+    }
+
+    // Сессия есть — сразу редирект по роли
+    await redirectByRole(data.user.id);
+  }
+
+  async function handleLogin() {
+    const email = emailInput.value.trim();
+    const password = passInput.value.trim();
+
+    if (!email || !password) {
+      setStatus("Email and password are required.", true);
+      return;
+    }
+
+    setStatus("Signing in...");
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error("signIn error", error);
+      setStatus(error.message || "Failed to sign in.", true);
+      return;
+    }
+
+    const user = data?.user;
+    if (!user) {
+      setStatus("No user returned from Supabase.", true);
+      return;
+    }
+
+    await redirectByRole(user.id);
+  }
+
+  // Жёсткий редирект по роли из таблицы profiles
+  async function redirectByRole(userId) {
+    setStatus("Loading profile...");
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("profile load error", error);
+      setStatus("Failed to load profile.", true);
+      formEl.classList.remove("hidden");
+      return;
+    }
+
+    if (!profile || !profile.role) {
+      setStatus("User role is not set in profiles.", true);
+      formEl.classList.remove("hidden");
+      return;
+    }
+
+    if (profile.role === "landlord") {
+      window.location.replace("landlord.html");
+    } else if (profile.role === "tenant") {
+      window.location.replace("tenant.html");
+    } else {
+      setStatus("Unknown role: " + profile.role, true);
+      formEl.classList.remove("hidden");
+    }
+  }
+</script>
+</body>
+</html>
