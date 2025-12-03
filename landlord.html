@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-  <div class="max-w-5xl mx-auto py-8">
+  <div class="max-w-5xl mx-auto py-8 px-4">
     <header class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-slate-800">Landlord Dashboard</h1>
       <div class="flex items-center gap-3">
@@ -23,7 +23,7 @@
     </header>
 
     <section class="mb-4">
-      <p id="welcome" class="text-slate-700">Loading...</p>
+      <p id="welcome" class="text-slate-700">Loading user data...</p>
       <p id="statusMessage" class="text-sm mt-1"></p>
     </section>
 
@@ -77,7 +77,7 @@
             <input id="photos" type="file" accept="image/*" multiple
               class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             <p class="text-xs text-slate-500 mt-1">
-              You can select up to 4 images in one action.
+              You can select up to 4 images.
             </p>
           </div>
 
@@ -99,8 +99,7 @@
 
 <script>
   const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   let currentUser = null;
@@ -109,73 +108,70 @@
     const el = document.getElementById("statusMessage");
     if (!el) return;
     el.textContent = text || "";
-    el.className = "text-sm mt-1";
-    if (!text) return;
-    el.classList.add(isError ? "text-red-600" : "text-emerald-600");
+    el.className = "text-sm mt-1 " + (isError ? "text-red-600" : "text-emerald-600");
   }
 
   function safeUUID() {
-    try {
-      if (window.crypto && window.crypto.randomUUID) {
-        return window.crypto.randomUUID();
-      }
-    } catch (e) {}
-    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+    return "img-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
   }
 
   window.addEventListener("load", () => {
-    init().catch(e => {
-      console.error("init error", e);
-      setStatus("Init error: " + (e.message || e), true);
-    });
+    init();
   });
 
   async function init() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data || !data.user) {
+    // 1. Проверяем авторизацию
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error || !user) {
       window.location.href = "index.html";
       return;
     }
-    currentUser = data.user;
-
-    const welcome = document.getElementById("welcome");
-    if (welcome) {
-      welcome.textContent = `Welcome, ${currentUser.email}`;
+    
+    // 2. Проверяем РОЛЬ (защита от арендаторов)
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+    if (profile && profile.role !== 'landlord') {
+        // Если ты не лендлорд — иди искать квартиры
+        window.location.href = "tenant.html";
+        return;
     }
 
+    currentUser = user;
+    document.getElementById("welcome").textContent = `Welcome, ${currentUser.email}`;
+
+    // 3. Вешаем обработчик Logout
     document.getElementById("logoutBtn").addEventListener("click", async () => {
+      document.getElementById("logoutBtn").textContent = "Logging out...";
       await supabase.auth.signOut();
       window.location.href = "index.html";
     });
 
-    document.getElementById("createBtn").addEventListener("click", () => {
-      onCreateListing().catch(e => {
-        console.error("onCreateListing error", e);
-        setStatus("Error: " + (e.message || e), true);
-      });
-    });
+    // 4. Вешаем обработчик создания
+    document.getElementById("createBtn").addEventListener("click", onCreateListing);
 
-    // Load initial data
-    await Promise.all([
-        loadMyListings(),
-        loadInbox()
-    ]);
+    // 5. Грузим данные
+    loadMyListings();
+    loadInbox();
   }
 
+  // --- ЛОГИКА ЗАГРУЗКИ СООБЩЕНИЙ ---
   async function loadInbox() {
     const container = document.getElementById("inboxList");
     const countBadge = document.getElementById("inboxCount");
-    if (!container) return;
-
-    // Load messages and join with listing table to get title/city
+    
     const { data, error } = await supabase
       .from("messages")
       .select("*, listing(title, city)")
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("loadInbox error", error);
-      container.innerHTML = `<div class="text-red-600">Failed to load messages.</div>`;
+      console.error("Inbox error", error);
+      container.textContent = "Error loading messages.";
       return;
     }
 
@@ -188,202 +184,154 @@
       countBadge.textContent = data.length;
       countBadge.classList.remove("hidden");
     }
-
     container.innerHTML = "";
     
     data.forEach(msg => {
       const div = document.createElement("div");
       div.className = "border-b last:border-0 pb-3 mb-3 hover:bg-slate-50 p-2 rounded transition";
-      
-      const dateStr = new Date(msg.created_at).toLocaleString();
-      // Handle case where listing might be deleted but message remains
-      const listingInfo = msg.listing 
-        ? `${msg.listing.title} (${msg.listing.city})` 
-        : "Unknown listing (deleted?)";
-      
-      const tenantContact = msg.tenant_email || "Anonymous";
-
+      const listingTitle = msg.listing ? `${msg.listing.title}` : "Unknown listing";
       div.innerHTML = `
-        <div class="flex justify-between items-start mb-1">
-          <span class="font-semibold text-emerald-700 text-xs uppercase tracking-wide">
-            ${listingInfo}
-          </span>
-          <span class="text-xs text-slate-400">${dateStr}</span>
+        <div class="flex justify-between mb-1">
+           <span class="font-bold text-xs text-emerald-700 uppercase">${listingTitle}</span>
+           <span class="text-xs text-slate-400">${new Date(msg.created_at).toLocaleDateString()}</span>
         </div>
-        <div class="font-medium text-slate-900 mb-1">From: ${tenantContact}</div>
-        <div class="text-slate-600 whitespace-pre-wrap bg-slate-50 p-2 rounded border border-slate-100 italic text-sm">${msg.message}</div>
+        <div class="font-medium text-sm mb-1">From: ${msg.tenant_email || "Guest"}</div>
+        <div class="text-slate-600 bg-slate-50 p-2 rounded text-sm italic border">${msg.message}</div>
       `;
-      
       container.appendChild(div);
     });
   }
 
+  // --- ЛОГИКА ЗАГРУЗКИ ФОТО ---
   async function uploadPhotos(files) {
     const urls = [null, null, null, null];
     const max = Math.min(files.length, 4);
 
     for (let i = 0; i < max; i++) {
       const file = files[i];
-      const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-      const path = `${currentUser.id}/${safeUUID()}.${ext}`;
+      const ext = file.name.split('.').pop();
+      const fileName = `${currentUser.id}/${safeUUID()}.${ext}`;
 
-      const { error: upErr } = await supabase
-        .storage
-        .from("listing-photos")
-        .upload(path, file);
+      // Upload
+      const { error: upErr } = await supabase.storage
+        .from('listing-photos')
+        .upload(fileName, file);
 
       if (upErr) {
-        console.error("Upload error", upErr);
+        console.error("Upload failed", upErr);
         throw upErr;
       }
 
-      const { data: pub, error: pubErr } = supabase
-        .storage
-        .from("listing-photos")
-        .getPublicUrl(path);
-
-      if (pubErr) {
-        console.error("getPublicUrl error", pubErr);
-        throw pubErr;
-      }
-
-      urls[i] = pub.publicUrl;
+      // Get URL
+      const { data: pubData } = supabase.storage
+        .from('listing-photos')
+        .getPublicUrl(fileName);
+        
+      urls[i] = pubData.publicUrl;
     }
-
     return urls;
   }
 
+  // --- ЛОГИКА СОЗДАНИЯ ОБЪЯВЛЕНИЯ ---
   async function onCreateListing() {
     setStatus("");
-
+    const btn = document.getElementById("createBtn");
+    
+    // Сбор данных
     const title = document.getElementById("title").value.trim();
     const city = document.getElementById("city").value.trim();
-    const priceVal = document.getElementById("price").value.trim();
-    const depositVal = document.getElementById("deposit").value.trim();
-    const description = document.getElementById("description").value.trim();
-    const has_wifi = document.getElementById("has_wifi").checked;
-    const allow_pets = document.getElementById("allow_pets").checked;
-    const is_furnished = document.getElementById("is_furnished").checked;
-    const is_active = document.getElementById("is_active").checked;
+    const price = document.getElementById("price").value;
+    const deposit = document.getElementById("deposit").value;
+    const desc = document.getElementById("description").value;
     const files = document.getElementById("photos").files;
 
-    if (!title || !city || !priceVal) {
-      setStatus("Title, city and monthly price are required.", true);
-      return;
+    if (!title || !city || !price) {
+        setStatus("Title, City and Price are required!", true);
+        return;
     }
 
-    const price_per_month = parseInt(priceVal, 10);
-    const deposit_amount = depositVal ? parseInt(depositVal, 10) : null;
+    btn.disabled = true;
+    btn.textContent = "Saving...";
 
-    if (Number.isNaN(price_per_month)) {
-      setStatus("Monthly price must be a number.", true);
-      return;
+    try {
+        // 1. Грузим фото (если есть)
+        let urls = [null, null, null, null];
+        if (files.length > 0) {
+            setStatus("Uploading photos...");
+            urls = await uploadPhotos(files);
+        }
+
+        // 2. Пишем в БД
+        setStatus("Saving data...");
+        const { error } = await supabase.from('listing').insert([{
+            owner_id: currentUser.id,
+            title: title,
+            city: city,
+            price_per_month: parseInt(price),
+            deposit_amount: deposit ? parseInt(deposit) : null,
+            description: desc,
+            has_wifi: document.getElementById("has_wifi").checked,
+            allow_pets: document.getElementById("allow_pets").checked,
+            is_furnished: document.getElementById("is_furnished").checked,
+            is_active: document.getElementById("is_active").checked,
+            main_photo_url: urls[0],
+            photo2_url: urls[1],
+            photo3_url: urls[2],
+            photo4_url: urls[3]
+        }]);
+
+        if (error) throw error;
+
+        setStatus("Success! Listing created.");
+        // Чистим форму
+        document.getElementById("title").value = "";
+        document.getElementById("city").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("photos").value = "";
+        loadMyListings();
+
+    } catch (e) {
+        console.error(e);
+        setStatus("Error: " + e.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Save listing";
     }
-    if (depositVal && Number.isNaN(deposit_amount)) {
-      setStatus("Deposit must be a number.", true);
-      return;
-    }
-
-    let urls = [null, null, null, null];
-
-    if (files && files.length > 0) {
-      setStatus("Uploading photos...", false);
-      urls = await uploadPhotos(files);
-    }
-
-    setStatus("Saving listing...", false);
-
-    const { error } = await supabase
-      .from("listing")
-      .insert([{
-        owner_id: currentUser.id,
-        title,
-        city,
-        description,
-        price_per_month,
-        deposit_amount,
-        is_active,
-        has_wifi,
-        allow_pets,
-        is_furnished,
-        main_photo_url: urls[0],
-        photo2_url: urls[1],
-        photo3_url: urls[2],
-        photo4_url: urls[3]
-      }]);
-
-    if (error) {
-      console.error("Insert error", error);
-      setStatus(error.message || "Insert error", true);
-      return;
-    }
-
-    setStatus("Listing saved successfully.", false);
-
-    // Clear form
-    document.getElementById("title").value = "";
-    document.getElementById("city").value = "";
-    document.getElementById("price").value = "";
-    document.getElementById("deposit").value = "";
-    document.getElementById("description").value = "";
-    document.getElementById("has_wifi").checked = false;
-    document.getElementById("allow_pets").checked = false;
-    document.getElementById("is_furnished").checked = false;
-    document.getElementById("is_active").checked = true;
-    document.getElementById("photos").value = "";
-
-    await loadMyListings();
   }
 
+  // --- СПИСОК МОИХ ОБЪЯВЛЕНИЙ ---
   async function loadMyListings() {
     const container = document.getElementById("myListings");
-    if (!container) return;
-    container.textContent = "Loading...";
-
     const { data, error } = await supabase
-      .from("listing")
-      .select("*")
-      .eq("owner_id", currentUser.id)
-      .order("created_at", { ascending: false });
+        .from('listing')
+        .select('*')
+        .eq('owner_id', currentUser.id)
+        .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("loadMyListings error", error);
-      container.textContent = error.message || "Error loading listings";
-      return;
+        container.textContent = "Error loading listings";
+        return;
     }
-
-    if (!data || data.length === 0) {
-      container.textContent = "No listings yet.";
-      return;
+    if (!data.length) {
+        container.textContent = "No listings yet.";
+        return;
     }
 
     container.innerHTML = "";
     data.forEach(item => {
-      const div = document.createElement("div");
-      div.className =
-        "border rounded-xl p-3 flex gap-3 items-center cursor-pointer hover:bg-slate-50";
-
-      const thumbHtml = item.main_photo_url
-        ? `<img src="${item.main_photo_url}" alt="photo"
-                 class="w-16 h-16 object-cover rounded-lg border" />`
-        : `<div class="w-16 h-16 rounded-lg border bg-slate-100 flex items-center justify-center text-xs text-slate-400">
-             no photo
-           </div>`;
-
-      div.innerHTML = `
-        ${thumbHtml}
-        <div class="flex-1">
-          <div class="font-semibold">${item.title || "(no title)"} — ${item.city || ""}</div>
-          <div class="text-sm text-slate-700">${item.price_per_month ?? ""} / month</div>
-          <div class="text-xs text-slate-500 truncate">${item.description || ""}</div>
-        </div>
-      `;
-
-      div.addEventListener("click", () => {
-        window.location.href = "listing-details.html?id=" + item.id;
-      });
-
-      container.appendChild(div);
+        const div = document.createElement("div");
+        div.className = "flex gap-3 border p-2 rounded-xl mb-2 items-center hover:bg-slate-50 cursor-pointer";
+        const img = item.main_photo_url || "https://via.placeholder.com/60";
+        div.innerHTML = `
+            <img src="${img}" class="w-12 h-12 rounded bg-slate-200 object-cover">
+            <div>
+                <div class="font-bold text-sm">${item.title}</div>
+                <div class="text-xs text-slate-500">$${item.price_per_month} • ${item.city}</div>
+            </div>
+        `;
+        div.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
+        container.appendChild(div);
     });
   }
 </script>
