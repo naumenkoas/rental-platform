@@ -1,22 +1,391 @@
--- 1. Сначала удалим старые политики на SELECT (чтобы не конфликтовали)
-DROP POLICY IF EXISTS "Enable read access for authenticated users" ON messages;
-DROP POLICY IF EXISTS "Public can insert messages" ON messages; 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Landlord Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <div class="max-w-5xl mx-auto py-8">
+    <header class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-slate-800">Landlord Dashboard</h1>
+      <div class="flex items-center gap-3">
+        <a href="tenant.html"
+           class="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 text-sm font-semibold hover:bg-slate-50 transition">
+          Search listings
+        </a>
+        <button id="logoutBtn"
+          class="px-4 py-2 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-900 transition">
+          Log out
+        </button>
+      </div>
+    </header>
 
--- 2. Разрешаем ВСТАВКУ (INSERT) для всех (включая анонимов, как в ТЗ)
-CREATE POLICY "Public can insert messages"
-ON messages FOR INSERT
-TO public
-WITH CHECK (true);
+    <section class="mb-4">
+      <p id="welcome" class="text-slate-700">Loading...</p>
+      <p id="statusMessage" class="text-sm mt-1"></p>
+    </section>
 
--- 3. Разрешаем ЧТЕНИЕ (SELECT) только владельцам объявлений
--- Логика: "Я могу прочитать сообщение, если я залогинен И (я являюсь владельцем объявления, на которое ссылается это сообщение)"
-CREATE POLICY "Landlords view messages for their listings"
-ON messages FOR SELECT
-TO authenticated
-USING (
-  exists (
-    select 1 from listing
-    where listing.id = messages.listing_id
-    and listing.owner_id = auth.uid()
-  )
-);
+    <section class="mb-6">
+      <div class="bg-white rounded-2xl shadow p-5">
+        <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">
+          Inbox
+          <span id="inboxCount" class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hidden">0</span>
+        </h2>
+        <div id="inboxList" class="space-y-3 text-sm text-slate-700 max-h-64 overflow-y-auto">
+          Loading messages...
+        </div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl shadow p-5">
+        <h2 class="text-xl font-semibold mb-3">Add new listing</h2>
+        <div class="space-y-2">
+          <input id="title" type="text" placeholder="Title"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="city" type="text" placeholder="City"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="price" type="number" placeholder="Monthly price"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="deposit" type="number" placeholder="Deposit amount (optional)"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <textarea id="description" placeholder="Description"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+
+          <div class="flex flex-wrap gap-3 text-sm text-slate-700">
+            <label class="inline-flex items-center gap-1">
+              <input id="has_wifi" type="checkbox" class="rounded border-slate-300" />
+              <span>Wi-Fi</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="allow_pets" type="checkbox" class="rounded border-slate-300" />
+              <span>Pets allowed</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="is_furnished" type="checkbox" class="rounded border-slate-300" />
+              <span>Furnished</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="is_active" type="checkbox" class="rounded border-slate-300" checked />
+              <span>Active</span>
+            </label>
+          </div>
+
+          <div>
+            <input id="photos" type="file" accept="image/*" multiple
+              class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <p class="text-xs text-slate-500 mt-1">
+              You can select up to 4 images in one action.
+            </p>
+          </div>
+
+          <button id="createBtn"
+            class="w-full px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+            Save listing
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5">
+        <h2 class="text-xl font-semibold mb-3">My listings</h2>
+        <div id="myListings" class="space-y-3 text-sm text-slate-700">
+          Loading...
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  let currentUser = null;
+
+  function setStatus(text, isError = false) {
+    const el = document.getElementById("statusMessage");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = "text-sm mt-1";
+    if (!text) return;
+    el.classList.add(isError ? "text-red-600" : "text-emerald-600");
+  }
+
+  function safeUUID() {
+    try {
+      if (window.crypto && window.crypto.randomUUID) {
+        return window.crypto.randomUUID();
+      }
+    } catch (e) {}
+    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+  }
+
+  window.addEventListener("load", () => {
+    init().catch(e => {
+      console.error("init error", e);
+      setStatus("Init error: " + (e.message || e), true);
+    });
+  });
+
+  async function init() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data || !data.user) {
+      window.location.href = "index.html";
+      return;
+    }
+    currentUser = data.user;
+
+    const welcome = document.getElementById("welcome");
+    if (welcome) {
+      welcome.textContent = `Welcome, ${currentUser.email}`;
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "index.html";
+    });
+
+    document.getElementById("createBtn").addEventListener("click", () => {
+      onCreateListing().catch(e => {
+        console.error("onCreateListing error", e);
+        setStatus("Error: " + (e.message || e), true);
+      });
+    });
+
+    // Load initial data
+    await Promise.all([
+        loadMyListings(),
+        loadInbox()
+    ]);
+  }
+
+  async function loadInbox() {
+    const container = document.getElementById("inboxList");
+    const countBadge = document.getElementById("inboxCount");
+    if (!container) return;
+
+    // Load messages and join with listing table to get title/city
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*, listing(title, city)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("loadInbox error", error);
+      container.innerHTML = `<div class="text-red-600">Failed to load messages.</div>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      container.textContent = "No messages yet.";
+      return;
+    }
+
+    if (countBadge) {
+      countBadge.textContent = data.length;
+      countBadge.classList.remove("hidden");
+    }
+
+    container.innerHTML = "";
+    
+    data.forEach(msg => {
+      const div = document.createElement("div");
+      div.className = "border-b last:border-0 pb-3 mb-3 hover:bg-slate-50 p-2 rounded transition";
+      
+      const dateStr = new Date(msg.created_at).toLocaleString();
+      // Handle case where listing might be deleted but message remains
+      const listingInfo = msg.listing 
+        ? `${msg.listing.title} (${msg.listing.city})` 
+        : "Unknown listing (deleted?)";
+      
+      const tenantContact = msg.tenant_email || "Anonymous";
+
+      div.innerHTML = `
+        <div class="flex justify-between items-start mb-1">
+          <span class="font-semibold text-emerald-700 text-xs uppercase tracking-wide">
+            ${listingInfo}
+          </span>
+          <span class="text-xs text-slate-400">${dateStr}</span>
+        </div>
+        <div class="font-medium text-slate-900 mb-1">From: ${tenantContact}</div>
+        <div class="text-slate-600 whitespace-pre-wrap bg-slate-50 p-2 rounded border border-slate-100 italic text-sm">${msg.message}</div>
+      `;
+      
+      container.appendChild(div);
+    });
+  }
+
+  async function uploadPhotos(files) {
+    const urls = [null, null, null, null];
+    const max = Math.min(files.length, 4);
+
+    for (let i = 0; i < max; i++) {
+      const file = files[i];
+      const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+      const path = `${currentUser.id}/${safeUUID()}.${ext}`;
+
+      const { error: upErr } = await supabase
+        .storage
+        .from("listing-photos")
+        .upload(path, file);
+
+      if (upErr) {
+        console.error("Upload error", upErr);
+        throw upErr;
+      }
+
+      const { data: pub, error: pubErr } = supabase
+        .storage
+        .from("listing-photos")
+        .getPublicUrl(path);
+
+      if (pubErr) {
+        console.error("getPublicUrl error", pubErr);
+        throw pubErr;
+      }
+
+      urls[i] = pub.publicUrl;
+    }
+
+    return urls;
+  }
+
+  async function onCreateListing() {
+    setStatus("");
+
+    const title = document.getElementById("title").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const priceVal = document.getElementById("price").value.trim();
+    const depositVal = document.getElementById("deposit").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const has_wifi = document.getElementById("has_wifi").checked;
+    const allow_pets = document.getElementById("allow_pets").checked;
+    const is_furnished = document.getElementById("is_furnished").checked;
+    const is_active = document.getElementById("is_active").checked;
+    const files = document.getElementById("photos").files;
+
+    if (!title || !city || !priceVal) {
+      setStatus("Title, city and monthly price are required.", true);
+      return;
+    }
+
+    const price_per_month = parseInt(priceVal, 10);
+    const deposit_amount = depositVal ? parseInt(depositVal, 10) : null;
+
+    if (Number.isNaN(price_per_month)) {
+      setStatus("Monthly price must be a number.", true);
+      return;
+    }
+    if (depositVal && Number.isNaN(deposit_amount)) {
+      setStatus("Deposit must be a number.", true);
+      return;
+    }
+
+    let urls = [null, null, null, null];
+
+    if (files && files.length > 0) {
+      setStatus("Uploading photos...", false);
+      urls = await uploadPhotos(files);
+    }
+
+    setStatus("Saving listing...", false);
+
+    const { error } = await supabase
+      .from("listing")
+      .insert([{
+        owner_id: currentUser.id,
+        title,
+        city,
+        description,
+        price_per_month,
+        deposit_amount,
+        is_active,
+        has_wifi,
+        allow_pets,
+        is_furnished,
+        main_photo_url: urls[0],
+        photo2_url: urls[1],
+        photo3_url: urls[2],
+        photo4_url: urls[3]
+      }]);
+
+    if (error) {
+      console.error("Insert error", error);
+      setStatus(error.message || "Insert error", true);
+      return;
+    }
+
+    setStatus("Listing saved successfully.", false);
+
+    // Clear form
+    document.getElementById("title").value = "";
+    document.getElementById("city").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("deposit").value = "";
+    document.getElementById("description").value = "";
+    document.getElementById("has_wifi").checked = false;
+    document.getElementById("allow_pets").checked = false;
+    document.getElementById("is_furnished").checked = false;
+    document.getElementById("is_active").checked = true;
+    document.getElementById("photos").value = "";
+
+    await loadMyListings();
+  }
+
+  async function loadMyListings() {
+    const container = document.getElementById("myListings");
+    if (!container) return;
+    container.textContent = "Loading...";
+
+    const { data, error } = await supabase
+      .from("listing")
+      .select("*")
+      .eq("owner_id", currentUser.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("loadMyListings error", error);
+      container.textContent = error.message || "Error loading listings";
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      container.textContent = "No listings yet.";
+      return;
+    }
+
+    container.innerHTML = "";
+    data.forEach(item => {
+      const div = document.createElement("div");
+      div.className =
+        "border rounded-xl p-3 flex gap-3 items-center cursor-pointer hover:bg-slate-50";
+
+      const thumbHtml = item.main_photo_url
+        ? `<img src="${item.main_photo_url}" alt="photo"
+                 class="w-16 h-16 object-cover rounded-lg border" />`
+        : `<div class="w-16 h-16 rounded-lg border bg-slate-100 flex items-center justify-center text-xs text-slate-400">
+             no photo
+           </div>`;
+
+      div.innerHTML = `
+        ${thumbHtml}
+        <div class="flex-1">
+          <div class="font-semibold">${item.title || "(no title)"} — ${item.city || ""}</div>
+          <div class="text-sm text-slate-700">${item.price_per_month ?? ""} / month</div>
+          <div class="text-xs text-slate-500 truncate">${item.description || ""}</div>
+        </div>
+      `;
+
+      div.addEventListener("click", () => {
+        window.location.href = "listing-details.html?id=" + item.id;
+      });
+
+      container.appendChild(div);
+    });
+  }
+</script>
+</body>
+</html>
