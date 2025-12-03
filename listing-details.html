@@ -2,265 +2,227 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Listing details</title>
+  <title>Listing Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-  <div class="max-w-4xl mx-auto py-8">
+  <div class="max-w-4xl mx-auto py-8 px-4">
     <header class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-slate-800">Listing details</h1>
-      <a href="javascript:history.back()"
-         class="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition">
-        Back
-      </a>
+      <button onclick="history.back()" class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back to listings
+      </button>
     </header>
 
-    <section id="status" class="mb-4 text-sm text-slate-600">
-      Loading listing...
-    </section>
+    <div id="loading" class="text-center py-10 text-slate-500">Loading details...</div>
 
-    <section id="content" class="bg-white rounded-2xl shadow p-6 space-y-6 hidden">
-      <div>
-        <h2 id="title" class="text-2xl font-semibold text-slate-900"></h2>
-        <p id="city" class="text-slate-700"></p>
-        <p id="price" class="text-lg font-semibold text-emerald-700 mt-2"></p>
-        <p id="flags" class="text-sm text-slate-600 mt-1"></p>
+    <div id="content" class="hidden space-y-6">
+      
+      <div id="inactiveBanner" class="hidden bg-slate-200 text-slate-700 p-4 rounded-xl border border-slate-300 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+        <div>
+          <span class="font-bold">This listing is no longer active.</span>
+          <span class="text-sm">You can view the details, but you cannot contact the landlord.</span>
+        </div>
       </div>
 
-      <div>
-        <h3 class="text-lg font-semibold mb-2">Description</h3>
-        <p id="description" class="text-slate-700 whitespace-pre-line"></p>
+      <div class="bg-white p-2 rounded-2xl shadow">
+        <div id="mainPhoto" class="h-64 md:h-96 bg-slate-200 rounded-xl overflow-hidden mb-2 relative">
+          </div>
+        <div id="thumbnails" class="grid grid-cols-4 gap-2">
+          </div>
       </div>
 
-      <div id="photosBlock">
-        <h3 class="text-lg font-semibold mb-2">Photos</h3>
-        <div id="photos" class="flex flex-wrap gap-3"></div>
-        <p id="noPhotos" class="text-sm text-slate-500 hidden">No photos.</p>
-      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="md:col-span-2 space-y-6">
+          <div class="bg-white p-6 rounded-2xl shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                 <h1 id="title" class="text-2xl font-bold text-slate-900 mb-1"></h1>
+                 <p id="city" class="text-lg text-slate-500"></p>
+              </div>
+              <div id="price" class="text-xl font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg"></div>
+            </div>
+            
+            <div id="features" class="flex gap-3 mt-4 flex-wrap">
+              </div>
 
-      <div>
-        <h3 class="text-lg font-semibold mb-2">Contact landlord</h3>
-        <p class="text-sm text-slate-600 mb-2">
-          Your message will be delivered via the platform. Landlord email is not shown.
-        </p>
-        <textarea id="contactMessage" rows="3"
-          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2"
-          placeholder="Write your message..."></textarea>
-        <input id="contactEmail" type="email"
-          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2"
-          placeholder="Your email (optional if you are logged in, required if not)" />
-        <button id="sendMessageBtn"
-          class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-          Send message
-        </button>
-        <p id="contactStatus" class="text-sm mt-2"></p>
-      </div>
+            <hr class="my-6 border-slate-100">
+            
+            <h3 class="font-semibold text-lg mb-2">Description</h3>
+            <p id="description" class="text-slate-600 whitespace-pre-line leading-relaxed"></p>
+          </div>
+        </div>
 
-      <div class="text-xs text-slate-400">
-        <span id="meta"></span>
+        <div class="md:col-span-1">
+          <div class="bg-white p-6 rounded-2xl shadow sticky top-6">
+            <h3 class="font-bold text-lg mb-4">Contact Landlord</h3>
+            
+            <div id="contactForm">
+               <textarea id="messageInput" rows="4" placeholder="Hi, I'm interested in this apartment..."
+                class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3 text-sm"></textarea>
+               
+               <input id="emailInput" type="email" placeholder="Your email address"
+                class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3 text-sm hidden" />
+               <p id="emailHint" class="text-xs text-slate-400 mb-3 hidden">Enter your email so the landlord can reply.</p>
+
+               <button id="sendBtn" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">
+                 Send Message
+               </button>
+               <p id="formStatus" class="text-center text-xs mt-3 h-4"></p>
+            </div>
+
+            <div id="contactDisabled" class="hidden text-center text-slate-500 text-sm bg-slate-50 p-4 rounded-xl">
+              Messaging disabled for inactive listings.
+            </div>
+
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
   </div>
 
 <script>
   const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  const statusEl = document.getElementById("status");
-  const contentEl = document.getElementById("content");
-  const contactStatusEl = document.getElementById("contactStatus");
-
+  let listingId = null;
   let currentUser = null;
-  let currentListingId = null;
-  let currentOwnerId = null;
 
-  function setStatus(text, isError = false) {
-    statusEl.textContent = text;
-    statusEl.className =
-      "mb-4 text-sm " + (isError ? "text-red-600" : "text-slate-600");
-  }
-
-  function setContactStatus(text, isError = false) {
-    contactStatusEl.textContent = text || "";
-    contactStatusEl.className =
-      "text-sm mt-2 " + (isError ? "text-red-600" : "text-emerald-600");
-  }
-
-  window.addEventListener("load", () => {
-    init().catch(e => {
-      console.error("listing init error", e);
-      setStatus("Error: " + (e.message || e), true);
-    });
-  });
-
-  async function init() {
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (!error && data && data.user) {
-        currentUser = data.user;
-      }
-    } catch (e) {
-      console.warn("getUser failed", e);
-    }
-
-    await loadListing();
-
-    const btn = document.getElementById("sendMessageBtn");
-    btn.addEventListener("click", () => {
-      sendMessage().catch(e => {
-        console.error("sendMessage error", e);
-        setContactStatus("Error sending message: " + (e.message || e), true);
-      });
-    });
-  }
-
-  async function loadListing() {
+  window.addEventListener("load", async () => {
+    // 1. Get Params
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-
-    if (!id) {
-      setStatus("No listing id in URL.", true);
+    listingId = params.get("id");
+    
+    if (!listingId) {
+      document.getElementById("loading").textContent = "Error: No listing specified.";
       return;
     }
 
-    setStatus("Loading listing...", false);
+    // 2. Check User
+    const { data: auth } = await supabase.auth.getUser();
+    currentUser = auth?.user;
 
+    // Show email input if not logged in
+    if (!currentUser) {
+      document.getElementById("emailInput").classList.remove("hidden");
+      document.getElementById("emailHint").classList.remove("hidden");
+    }
+
+    // 3. Load Data
+    await loadListingData();
+
+    // 4. Attach Event
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
+  });
+
+  async function loadListingData() {
     const { data, error } = await supabase
       .from("listing")
       .select("*")
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", listingId)
+      .single();
 
-    if (error) {
-      console.error("select error", error);
-      setStatus(error.message || "Error loading listing.", true);
+    if (error || !data) {
+      document.getElementById("loading").textContent = "Listing not found.";
       return;
     }
 
-    if (!data) {
-      setStatus("Listing not found.", true);
-      return;
-    }
+    // Fill Data
+    document.getElementById("title").textContent = data.title;
+    document.getElementById("city").textContent = data.city;
+    document.getElementById("price").textContent = `$${data.price_per_month} / mo`;
+    document.getElementById("description").textContent = data.description;
 
-    currentListingId = data.id;
-    currentOwnerId = data.owner_id || null;
+    // Features
+    const feats = [];
+    if(data.has_wifi) feats.push("📶 Wi-Fi");
+    if(data.allow_pets) feats.push("🐾 Pets");
+    if(data.is_furnished) feats.push("🛋️ Furnished");
+    if(data.deposit_amount) feats.push(`💰 Deposit: $${data.deposit_amount}`);
+    
+    const featContainer = document.getElementById("features");
+    featContainer.innerHTML = feats.map(f => 
+      `<span class="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">${f}</span>`
+    ).join("");
 
-    document.getElementById("title").textContent = data.title || "(no title)";
-    document.getElementById("city").textContent = data.city || "";
-    document.getElementById("price").textContent =
-      (data.price_per_month != null ? data.price_per_month + " / month" : "");
-
-    const flags = [];
-    if (data.has_wifi) flags.push("📶 Wi-Fi");
-    if (data.allow_pets) flags.push("🐾 Pets allowed");
-    if (data.is_furnished) flags.push("🛋️ Furnished");
-    if (data.is_active === false) flags.push("⛔ Inactive listing");
-    document.getElementById("flags").textContent = flags.join(" • ");
-
-    document.getElementById("description").textContent =
-      data.description || "";
-
-    document.getElementById("meta").textContent =
-      "id: " + data.id +
-      (data.created_at ? " • created at: " + data.created_at : "") +
-      (data.owner_id ? " • owner_id: " + data.owner_id : "");
-
-    const urls = [
-      data.main_photo_url,
-      data.photo2_url,
-      data.photo3_url,
-      data.photo4_url,
-    ].filter(u => !!u);
-
-    const photosEl = document.getElementById("photos");
-    const noPhotosEl = document.getElementById("noPhotos");
-
-    if (!urls.length) {
-      photosEl.innerHTML = "";
-      noPhotosEl.classList.remove("hidden");
+    // Photos
+    const photos = [data.main_photo_url, data.photo2_url, data.photo3_url, data.photo4_url].filter(Boolean);
+    if(photos.length > 0) {
+      document.getElementById("mainPhoto").innerHTML = `<img src="${photos[0]}" class="w-full h-full object-cover">`;
+      document.getElementById("thumbnails").innerHTML = photos.map(url => 
+        `<div class="h-20 bg-slate-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition border" onclick="setMain('${url}')">
+           <img src="${url}" class="w-full h-full object-cover">
+         </div>`
+      ).join("");
     } else {
-      noPhotosEl.classList.add("hidden");
-      photosEl.innerHTML = "";
-
-      urls.forEach((url, idx) => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "relative";
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.title = idx === 0 ? "Main photo (open full image in new tab)" : "Open full image in new tab";
-
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = "photo " + (idx + 1);
-        img.className = "w-32 h-32 object-cover rounded-xl border";
-
-        a.appendChild(img);
-        wrapper.appendChild(a);
-
-        if (idx === 0) {
-          const badge = document.createElement("div");
-          badge.textContent = "Main";
-          badge.className =
-            "absolute top-1 left-1 bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded-full";
-          wrapper.appendChild(badge);
-        }
-
-        photosEl.appendChild(wrapper);
-      });
+      document.getElementById("mainPhoto").innerHTML = `<div class="w-full h-full flex items-center justify-center text-slate-400">No photos</div>`;
     }
 
-    setStatus("", false);
-    contentEl.classList.remove("hidden");
+    // INACTIVE LOGIC
+    if (!data.is_active) {
+      document.getElementById("inactiveBanner").classList.remove("hidden");
+      document.getElementById("contactForm").classList.add("hidden");
+      document.getElementById("contactDisabled").classList.remove("hidden");
+    }
+
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+  }
+
+  // Helper for gallery
+  window.setMain = (url) => {
+    document.getElementById("mainPhoto").innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
   }
 
   async function sendMessage() {
-    setContactStatus("");
+    const btn = document.getElementById("sendBtn");
+    const status = document.getElementById("formStatus");
+    const message = document.getElementById("messageInput").value.trim();
+    
+    // Determine email
+    let email = currentUser ? currentUser.email : document.getElementById("emailInput").value.trim();
 
-    if (!currentListingId) {
-      setContactStatus("Listing not loaded.", true);
+    if (!message) {
+      status.textContent = "Please write a message.";
+      status.className = "text-center text-xs mt-3 h-4 text-red-500";
+      return;
+    }
+    if (!email) {
+      status.textContent = "Please provide an email.";
+      status.className = "text-center text-xs mt-3 h-4 text-red-500";
       return;
     }
 
-    const text = document.getElementById("contactMessage").value.trim();
-    const emailInput = document.getElementById("contactEmail").value.trim();
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    status.textContent = "";
 
-    if (!text) {
-      setContactStatus("Message text is required.", true);
-      return;
-    }
-
-    if (!currentUser && !emailInput) {
-      setContactStatus("Please log in or provide your email.", true);
-      return;
-    }
-
-    const payload = {
-      listing_id: currentListingId,
-      message: text,
-      tenant_id: currentUser ? currentUser.id : null,
-      tenant_email: currentUser ? currentUser.email : (emailInput || null),
-    };
-
-    setContactStatus("Sending...", false);
-
-    const { error } = await supabase
-      .from("messages")
-      .insert([payload]);
+    const { error } = await supabase.from("messages").insert([{
+      listing_id: listingId,
+      message: message,
+      tenant_email: email,
+      tenant_id: currentUser ? currentUser.id : null
+    }]);
 
     if (error) {
-      console.error("insert message error", error);
-      setContactStatus(error.message || "Failed to send message.", true);
-      return;
+      console.error(error);
+      status.textContent = "Failed to send. Try again.";
+      status.className = "text-center text-xs mt-3 h-4 text-red-500";
+      btn.disabled = false;
+      btn.textContent = "Send Message";
+    } else {
+      status.textContent = "Message sent successfully!";
+      status.className = "text-center text-xs mt-3 h-4 text-emerald-600 font-bold";
+      btn.textContent = "Sent";
+      document.getElementById("messageInput").value = "";
     }
-
-    document.getElementById("contactMessage").value = "";
-    setContactStatus("Message sent successfully.", false);
   }
 </script>
 </body>
