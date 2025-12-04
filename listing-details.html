@@ -2,227 +2,654 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Listing Details</title>
+  <title>Listing details</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
   <div class="max-w-4xl mx-auto py-8 px-4">
     <header class="flex justify-between items-center mb-6">
-      <button onclick="history.back()" class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-        Back to listings
-      </button>
+      <h1 class="text-3xl font-bold text-slate-800">Listing details</h1>
+      <a href="javascript:history.back()"
+         class="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition">
+        Back
+      </a>
     </header>
 
-    <div id="loading" class="text-center py-10 text-slate-500">Loading details...</div>
+    <section id="status" class="mb-4 text-sm text-slate-600">
+      Loading listing...
+    </section>
 
-    <div id="content" class="hidden space-y-6">
-      
-      <div id="inactiveBanner" class="hidden bg-slate-200 text-slate-700 p-4 rounded-xl border border-slate-300 flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-        </svg>
-        <div>
-          <span class="font-bold">This listing is no longer active.</span>
-          <span class="text-sm">You can view the details, but you cannot contact the landlord.</span>
-        </div>
+    <!-- БЛОК ОБЪЯВЛЕНИЯ -->
+    <section id="content" class="bg-white rounded-2xl shadow p-6 space-y-6 hidden">
+      <div>
+        <h2 id="title" class="text-2xl font-semibold text-slate-900"></h2>
+        <p id="city" class="text-slate-700"></p>
+        <p id="price" class="text-lg font-semibold text-emerald-700 mt-2"></p>
+        <p id="flags" class="text-sm text-slate-600 mt-1"></p>
       </div>
 
-      <div class="bg-white p-2 rounded-2xl shadow">
-        <div id="mainPhoto" class="h-64 md:h-96 bg-slate-200 rounded-xl overflow-hidden mb-2 relative">
-          </div>
-        <div id="thumbnails" class="grid grid-cols-4 gap-2">
-          </div>
+      <div>
+        <h3 class="text-lg font-semibold mb-2">Description</h3>
+        <p id="description" class="text-slate-700 whitespace-pre-line"></p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-6">
-        <div class="md:col-span-2 space-y-6">
-          <div class="bg-white p-6 rounded-2xl shadow">
-            <div class="flex justify-between items-start">
-              <div>
-                 <h1 id="title" class="text-2xl font-bold text-slate-900 mb-1"></h1>
-                 <p id="city" class="text-lg text-slate-500"></p>
-              </div>
-              <div id="price" class="text-xl font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg"></div>
-            </div>
-            
-            <div id="features" class="flex gap-3 mt-4 flex-wrap">
-              </div>
+      <div id="photosBlock">
+        <h3 class="text-lg font-semibold mb-2">Photos</h3>
+        <div id="photos" class="flex flex-wrap gap-3"></div>
+        <p id="noPhotos" class="text-sm text-slate-500 hidden">No photos.</p>
+      </div>
 
-            <hr class="my-6 border-slate-100">
-            
-            <h3 class="font-semibold text-lg mb-2">Description</h3>
-            <p id="description" class="text-slate-600 whitespace-pre-line leading-relaxed"></p>
+      <div class="text-xs text-slate-400">
+        <span id="meta"></span>
+      </div>
+    </section>
+
+    <!-- БЛОК ЧАТА / СООБЩЕНИЙ -->
+    <section id="chatSection" class="mt-6 hidden">
+      <div class="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-800" id="chatTitle">Conversation</h2>
+            <p id="chatInfo" class="text-xs text-slate-500"></p>
           </div>
+          <button id="hideConversationBtn"
+            class="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50 transition hidden">
+            Hide conversation
+          </button>
         </div>
 
-        <div class="md:col-span-1">
-          <div class="bg-white p-6 rounded-2xl shadow sticky top-6">
-            <h3 class="font-bold text-lg mb-4">Contact Landlord</h3>
-            
-            <div id="contactForm">
-               <textarea id="messageInput" rows="4" placeholder="Hi, I'm interested in this apartment..."
-                class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3 text-sm"></textarea>
-               
-               <input id="emailInput" type="email" placeholder="Your email address"
-                class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3 text-sm hidden" />
-               <p id="emailHint" class="text-xs text-slate-400 mb-3 hidden">Enter your email so the landlord can reply.</p>
+        <div id="chatMessages"
+             class="border rounded-xl p-3 bg-slate-50 h-72 overflow-y-auto text-sm text-slate-800">
+          Loading messages...
+        </div>
 
-               <button id="sendBtn" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">
-                 Send Message
-               </button>
-               <p id="formStatus" class="text-center text-xs mt-3 h-4"></p>
-            </div>
-
-            <div id="contactDisabled" class="hidden text-center text-slate-500 text-sm bg-slate-50 p-4 rounded-xl">
-              Messaging disabled for inactive listings.
-            </div>
-
+        <div id="chatFooter" class="flex flex-col gap-2">
+          <textarea id="chatInput" rows="3" placeholder="Type your message..."
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
+          <div class="flex justify-between items-center gap-2">
+            <input id="chatEmail" type="email" placeholder="Your email (for guests)"
+              class="flex-1 px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs hidden" />
+            <button id="sendBtn"
+              class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+              Send
+            </button>
           </div>
+          <p id="chatStatus" class="text-xs text-slate-500"></p>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- ФОРМА ДЛЯ ГОСТЕЙ (одиночное сообщение) -->
+    <section id="guestSection" class="mt-6 hidden">
+      <div class="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
+        <h2 class="text-lg font-semibold text-slate-800">Contact landlord</h2>
+        <textarea id="guestMessage" rows="3" placeholder="Your message..."
+          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
+        <input id="guestEmail" type="email" placeholder="Your email"
+          class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
+        <button id="guestSendBtn"
+          class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+          Send message
+        </button>
+        <p id="guestStatus" class="text-xs text-slate-500"></p>
+      </div>
+    </section>
   </div>
 
 <script>
   const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  let listingId = null;
-  let currentUser = null;
+  const statusEl = document.getElementById("status");
+  const contentEl = document.getElementById("content");
+  const chatSectionEl = document.getElementById("chatSection");
+  const chatMessagesEl = document.getElementById("chatMessages");
+  const chatInfoEl = document.getElementById("chatInfo");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatEmailEl = document.getElementById("chatEmail");
+  const chatStatusEl = document.getElementById("chatStatus");
+  const sendBtnEl = document.getElementById("sendBtn");
+  const hideConversationBtn = document.getElementById("hideConversationBtn");
+  const guestSectionEl = document.getElementById("guestSection");
+  const guestMessageEl = document.getElementById("guestMessage");
+  const guestEmailEl = document.getElementById("guestEmail");
+  const guestSendBtn = document.getElementById("guestSendBtn");
+  const guestStatusEl = document.getElementById("guestStatus");
+  const chatTitleEl = document.getElementById("chatTitle");
 
-  window.addEventListener("load", async () => {
-    // 1. Get Params
+  let currentUser = null;
+  let currentProfile = null;
+  let currentListing = null;
+
+  let threadTenantId = null;
+  let threadTenantEmail = null;
+
+  function setStatus(text, isError = false) {
+    statusEl.textContent = text;
+    statusEl.className =
+      "mb-4 text-sm " + (isError ? "text-red-600" : "text-slate-600");
+  }
+
+  function setChatStatus(text, isError = false) {
+    chatStatusEl.textContent = text || "";
+    chatStatusEl.className =
+      "text-xs " + (isError ? "text-red-600" : "text-slate-500");
+  }
+
+  function setGuestStatus(text, isError = false) {
+    guestStatusEl.textContent = text || "";
+    guestStatusEl.className =
+      "text-xs " + (isError ? "text-red-600" : "text-slate-500");
+  }
+
+  window.addEventListener("load", () => {
+    init().catch(e => {
+      console.error("init error", e);
+      setStatus("Error: " + (e.message || e), true);
+    });
+  });
+
+  async function init() {
     const params = new URLSearchParams(window.location.search);
-    listingId = params.get("id");
-    
+    const listingId = params.get("id");
+    const tenantIdFromUrl = params.get("tenant_id");
+    const tenantEmailFromUrl = params.get("tenant_email");
+
     if (!listingId) {
-      document.getElementById("loading").textContent = "Error: No listing specified.";
+      setStatus("No listing id in URL.", true);
       return;
     }
 
-    // 2. Check User
-    const { data: auth } = await supabase.auth.getUser();
-    currentUser = auth?.user;
-
-    // Show email input if not logged in
-    if (!currentUser) {
-      document.getElementById("emailInput").classList.remove("hidden");
-      document.getElementById("emailHint").classList.remove("hidden");
-    }
-
-    // 3. Load Data
-    await loadListingData();
-
-    // 4. Attach Event
-    document.getElementById("sendBtn").addEventListener("click", sendMessage);
-  });
-
-  async function loadListingData() {
-    const { data, error } = await supabase
+    // 1. Загружаем объявление
+    const { data: listing, error: listErr } = await supabase
       .from("listing")
       .select("*")
       .eq("id", listingId)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
-      document.getElementById("loading").textContent = "Listing not found.";
+    if (listErr) {
+      console.error("select listing error", listErr);
+      setStatus(listErr.message || "Error loading listing.", true);
+      return;
+    }
+    if (!listing) {
+      setStatus("Listing not found.", true);
+      return;
+    }
+    currentListing = listing;
+    fillListing(listing);
+
+    // 2. Получаем текущего пользователя и профиль
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData && authData.user) {
+      currentUser = authData.user;
+      const { data: profile, error: profErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      if (!profErr && profile) {
+        currentProfile = profile;
+      }
+    }
+
+    // 3. Если объявление неактивно — просто сообщение и всё
+    if (currentListing.is_active === false) {
+      setStatus("This listing is inactive.", false);
+      chatSectionEl.classList.remove("hidden");
+      chatMessagesEl.textContent = "Messaging is disabled for inactive listings.";
+      document.getElementById("chatFooter").classList.add("hidden");
       return;
     }
 
-    // Fill Data
-    document.getElementById("title").textContent = data.title;
-    document.getElementById("city").textContent = data.city;
-    document.getElementById("price").textContent = `$${data.price_per_month} / mo`;
-    document.getElementById("description").textContent = data.description;
+    // 4. Определяем контекст: лендлорд / тенант / гость
+    const isLandlord = currentProfile && currentProfile.role === "landlord";
+    const isTenant = currentProfile && currentProfile.role === "tenant";
 
-    // Features
-    const feats = [];
-    if(data.has_wifi) feats.push("📶 Wi-Fi");
-    if(data.allow_pets) feats.push("🐾 Pets");
-    if(data.is_furnished) feats.push("🛋️ Furnished");
-    if(data.deposit_amount) feats.push(`💰 Deposit: $${data.deposit_amount}`);
-    
-    const featContainer = document.getElementById("features");
-    featContainer.innerHTML = feats.map(f => 
-      `<span class="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">${f}</span>`
-    ).join("");
+    // Гость (не залогинен)
+    if (!currentUser) {
+      setStatus("", false);
+      contentEl.classList.remove("hidden");
+      guestSectionEl.classList.remove("hidden");
+      setupGuestForm(listingId);
+      return;
+    }
 
-    // Photos
-    const photos = [data.main_photo_url, data.photo2_url, data.photo3_url, data.photo4_url].filter(Boolean);
-    if(photos.length > 0) {
-      document.getElementById("mainPhoto").innerHTML = `<img src="${photos[0]}" class="w-full h-full object-cover">`;
-      document.getElementById("thumbnails").innerHTML = photos.map(url => 
-        `<div class="h-20 bg-slate-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition border" onclick="setMain('${url}')">
-           <img src="${url}" class="w-full h-full object-cover">
-         </div>`
-      ).join("");
+    // Лендлорд
+    if (isLandlord) {
+      setStatus("", false);
+      contentEl.classList.remove("hidden");
+
+      // Лендлорд должен прийти с tenant_id или tenant_email
+      if (!tenantIdFromUrl && !tenantEmailFromUrl) {
+        chatSectionEl.classList.remove("hidden");
+        chatMessagesEl.textContent =
+          "To see a conversation, open this page from your Dashboard inbox.";
+        document.getElementById("chatFooter").classList.add("hidden");
+        return;
+      }
+
+      threadTenantId = tenantIdFromUrl || null;
+      threadTenantEmail = tenantEmailFromUrl || null;
+
+      chatSectionEl.classList.remove("hidden");
+      document.getElementById("chatFooter").classList.remove("hidden");
+      hideConversationBtn.classList.remove("hidden");
+      chatTitleEl.textContent = "Conversation with tenant";
+      chatInfoEl.textContent =
+        threadTenantEmail
+          ? `Tenant email: ${threadTenantEmail}`
+          : "Registered tenant";
+
+      chatEmailEl.classList.add("hidden"); // лендлорд email не вводит
+
+      hideConversationBtn.addEventListener("click", hideConversationForLandlord);
+      sendBtnEl.addEventListener("click", () => sendMessageAsLandlord(listingId));
+
+      await loadMessagesForThread(listingId, "landlord");
+      return;
+    }
+
+    // Тенант (залогинен)
+    if (isTenant) {
+      setStatus("", false);
+      contentEl.classList.remove("hidden");
+
+      threadTenantId = currentUser.id;
+      threadTenantEmail = currentUser.email || null;
+
+      chatSectionEl.classList.remove("hidden");
+      document.getElementById("chatFooter").classList.remove("hidden");
+      hideConversationBtn.classList.remove("hidden");
+      chatTitleEl.textContent = "Conversation with landlord";
+      chatInfoEl.textContent = "You are logged in as tenant.";
+      chatEmailEl.classList.add("hidden");
+
+      hideConversationBtn.addEventListener("click", hideConversationForTenant);
+      sendBtnEl.addEventListener("click", () => sendMessageAsTenant(listingId));
+
+      await loadMessagesForThread(listingId, "tenant");
+      return;
+    }
+
+    // На случай, если роль какая-то иная/битая
+    setStatus("", false);
+    contentEl.classList.remove("hidden");
+    chatSectionEl.classList.remove("hidden");
+    chatMessagesEl.textContent =
+      "Messaging is available only for landlords and tenants.";
+    document.getElementById("chatFooter").classList.add("hidden");
+  }
+
+  function fillListing(data) {
+    document.getElementById("title").textContent = data.title || "(no title)";
+    document.getElementById("city").textContent = data.city || "";
+    document.getElementById("price").textContent =
+      data.price_per_month != null ? data.price_per_month + " / month" : "";
+
+    const flags = [];
+    if (data.has_wifi) flags.push("Wi-Fi");
+    if (data.allow_pets) flags.push("Pets allowed");
+    if (data.is_furnished) flags.push("Furnished");
+    if (data.is_active === false) flags.push("Inactive listing");
+    document.getElementById("flags").textContent = flags.join(" • ");
+
+    document.getElementById("description").textContent =
+      data.description || "";
+
+    document.getElementById("meta").textContent =
+      "id: " + data.id +
+      (data.created_at ? " • created at: " + data.created_at : "") +
+      (data.owner_id ? " • owner_id: " + data.owner_id : "");
+
+    const urls = [
+      data.main_photo_url,
+      data.photo2_url,
+      data.photo3_url,
+      data.photo4_url
+    ].filter(u => !!u);
+
+    const photosEl = document.getElementById("photos");
+    const noPhotosEl = document.getElementById("noPhotos");
+
+    if (!urls.length) {
+      photosEl.innerHTML = "";
+      noPhotosEl.classList.remove("hidden");
     } else {
-      document.getElementById("mainPhoto").innerHTML = `<div class="w-full h-full flex items-center justify-center text-slate-400">No photos</div>`;
+      noPhotosEl.classList.add("hidden");
+      photosEl.innerHTML = "";
+      urls.forEach((url, idx) => {
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "photo " + (idx + 1);
+        img.className = "w-32 h-32 object-cover rounded-xl border";
+
+        a.appendChild(img);
+        photosEl.appendChild(a);
+      });
     }
 
-    // INACTIVE LOGIC
-    if (!data.is_active) {
-      document.getElementById("inactiveBanner").classList.remove("hidden");
-      document.getElementById("contactForm").classList.add("hidden");
-      document.getElementById("contactDisabled").classList.remove("hidden");
-    }
-
-    document.getElementById("loading").classList.add("hidden");
-    document.getElementById("content").classList.remove("hidden");
+    setStatus("", false);
+    contentEl.classList.remove("hidden");
   }
 
-  // Helper for gallery
-  window.setMain = (url) => {
-    document.getElementById("mainPhoto").innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+  // --------- ГОСТЬ: одиночное сообщение ---------
+
+  function setupGuestForm(listingId) {
+    guestSectionEl.classList.remove("hidden");
+    guestSendBtn.addEventListener("click", async () => {
+      const msg = guestMessageEl.value.trim();
+      const email = guestEmailEl.value.trim();
+
+      if (!msg || !email) {
+        setGuestStatus("Message and email are required.", true);
+        return;
+      }
+
+      setGuestStatus("Sending...");
+
+      const { error } = await supabase.from("messages").insert([
+        {
+          listing_id: listingId,
+          tenant_id: null,
+          tenant_email: email,
+          message: msg,
+          is_from_landlord: false,
+          is_read_by_landlord: false,
+          is_read_by_tenant: false,
+          hidden_for_landlord: false,
+          hidden_for_tenant: false
+        }
+      ]);
+
+      if (error) {
+        console.error("guest send error", error);
+        setGuestStatus(error.message || "Failed to send message.", true);
+        return;
+      }
+
+      guestMessageEl.value = "";
+      setGuestStatus("Message sent.");
+    });
   }
 
-  async function sendMessage() {
-    const btn = document.getElementById("sendBtn");
-    const status = document.getElementById("formStatus");
-    const message = document.getElementById("messageInput").value.trim();
-    
-    // Determine email
-    let email = currentUser ? currentUser.email : document.getElementById("emailInput").value.trim();
+  // --------- ЗАГРУЗКА СООБЩЕНИЙ ДЛЯ ТРЕДА ---------
 
-    if (!message) {
-      status.textContent = "Please write a message.";
-      status.className = "text-center text-xs mt-3 h-4 text-red-500";
-      return;
-    }
-    if (!email) {
-      status.textContent = "Please provide an email.";
-      status.className = "text-center text-xs mt-3 h-4 text-red-500";
+  async function loadMessagesForThread(listingId, role) {
+    if (!listingId) return;
+    if (!threadTenantId && !threadTenantEmail) {
+      chatMessagesEl.textContent = "No conversation selected.";
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = "Sending...";
-    status.textContent = "";
+    chatMessagesEl.textContent = "Loading messages...";
 
-    const { error } = await supabase.from("messages").insert([{
-      listing_id: listingId,
-      message: message,
-      tenant_email: email,
-      tenant_id: currentUser ? currentUser.id : null
-    }]);
+    let query = supabase
+      .from("messages")
+      .select("*")
+      .eq("listing_id", listingId)
+      .order("created_at", { ascending: true });
+
+    if (role === "landlord") {
+      query = query.eq("hidden_for_landlord", false);
+      if (threadTenantId) {
+        query = query.eq("tenant_id", threadTenantId);
+      } else if (threadTenantEmail) {
+        query = query.eq("tenant_email", threadTenantEmail);
+      }
+    } else if (role === "tenant") {
+      query = query
+        .eq("hidden_for_tenant", false)
+        .eq("tenant_id", threadTenantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      console.error(error);
-      status.textContent = "Failed to send. Try again.";
-      status.className = "text-center text-xs mt-3 h-4 text-red-500";
-      btn.disabled = false;
-      btn.textContent = "Send Message";
-    } else {
-      status.textContent = "Message sent successfully!";
-      status.className = "text-center text-xs mt-3 h-4 text-emerald-600 font-bold";
-      btn.textContent = "Sent";
-      document.getElementById("messageInput").value = "";
+      console.error("loadMessagesForThread error", error);
+      chatMessagesEl.textContent = error.message || "Error loading messages.";
+      return;
     }
+
+    if (!data || data.length === 0) {
+      chatMessagesEl.textContent = "No messages yet. Start the conversation.";
+      return;
+    }
+
+    // Отмечаем прочитанными
+    const idsToMark = [];
+    if (role === "landlord") {
+      data.forEach(msg => {
+        if (!msg.is_from_landlord && !msg.is_read_by_landlord) {
+          idsToMark.push(msg.id);
+        }
+      });
+      if (idsToMark.length) {
+        await supabase
+          .from("messages")
+          .update({ is_read_by_landlord: true })
+          .in("id", idsToMark);
+      }
+    } else if (role === "tenant") {
+      data.forEach(msg => {
+        if (msg.is_from_landlord && !msg.is_read_by_tenant) {
+          idsToMark.push(msg.id);
+        }
+      });
+      if (idsToMark.length) {
+        await supabase
+          .from("messages")
+          .update({ is_read_by_tenant: true })
+          .in("id", idsToMark);
+      }
+    }
+
+    // Рендер
+    chatMessagesEl.innerHTML = "";
+    data.forEach(msg => {
+      const wrapper = document.createElement("div");
+      const mine = (role === "landlord" && msg.is_from_landlord) ||
+                   (role === "tenant" && !msg.is_from_landlord);
+
+      wrapper.className =
+        "mb-2 flex " + (mine ? "justify-end" : "justify-start");
+
+      const bubble = document.createElement("div");
+      bubble.className =
+        "max-w-[70%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line " +
+        (mine
+          ? "bg-emerald-600 text-white rounded-br-sm"
+          : "bg-white text-slate-800 border rounded-bl-sm");
+
+      const time = new Date(msg.created_at).toLocaleString();
+      const meta = mine
+        ? (role === "landlord" ? "You (landlord)" : "You")
+        : (role === "landlord" ? "Tenant" : "Landlord");
+
+      let deleteBtnHtml = "";
+      const canDelete =
+        (role === "landlord" && msg.is_from_landlord && !msg.is_read_by_tenant) ||
+        (role === "tenant" && !msg.is_from_landlord && !msg.is_read_by_landlord);
+
+      if (canDelete) {
+        deleteBtnHtml =
+          `<button data-id="${msg.id}" class="ml-2 text-[10px] text-red-200 underline decoration-dotted hover:text-red-100">
+             delete
+           </button>`;
+      }
+
+      bubble.innerHTML = `
+        <div class="text-[10px] mb-1 opacity-75 flex items-center">
+          <span>${meta} • ${time}</span>
+          ${deleteBtnHtml}
+        </div>
+        <div>${msg.message || ""}</div>
+      `;
+
+      wrapper.appendChild(bubble);
+      chatMessagesEl.appendChild(wrapper);
+
+      if (canDelete) {
+        bubble
+          .querySelector("button[data-id]")
+          .addEventListener("click", () => deleteMessage(msg.id));
+      }
+    });
+
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  }
+
+  async function deleteMessage(messageId) {
+    if (!confirm("Delete this message? It is allowed only while it is unread by the other side.")) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId);
+
+    if (error) {
+      console.error("deleteMessage error", error);
+      alert(error.message || "Failed to delete message.");
+      return;
+    }
+
+    const role =
+      currentProfile && currentProfile.role === "landlord"
+        ? "landlord"
+        : "tenant";
+
+    await loadMessagesForThread(currentListing.id, role);
+  }
+
+  // --------- ОТПРАВКА СООБЩЕНИЙ ---------
+
+  async function sendMessageAsTenant(listingId) {
+    const text = chatInputEl.value.trim();
+    if (!text) {
+      setChatStatus("Message is empty.", true);
+      return;
+    }
+
+    setChatStatus("Sending...");
+
+    const { error } = await supabase.from("messages").insert([
+      {
+        listing_id: listingId,
+        tenant_id: threadTenantId,
+        tenant_email: threadTenantEmail,
+        message: text,
+        is_from_landlord: false,
+        is_read_by_landlord: false,
+        is_read_by_tenant: false,
+        hidden_for_landlord: false,
+        hidden_for_tenant: false
+      }
+    ]);
+
+    if (error) {
+      console.error("sendMessageAsTenant error", error);
+      setChatStatus(error.message || "Failed to send.", true);
+      return;
+    }
+
+    chatInputEl.value = "";
+    setChatStatus("Message sent.");
+    await loadMessagesForThread(listingId, "tenant");
+  }
+
+  async function sendMessageAsLandlord(listingId) {
+    const text = chatInputEl.value.trim();
+    if (!text) {
+      setChatStatus("Message is empty.", true);
+      return;
+    }
+
+    setChatStatus("Sending...");
+
+    const { error } = await supabase.from("messages").insert([
+      {
+        listing_id: listingId,
+        tenant_id: threadTenantId,
+        tenant_email: threadTenantEmail,
+        message: text,
+        is_from_landlord: true,
+        is_read_by_landlord: true,
+        is_read_by_tenant: false,
+        hidden_for_landlord: false,
+        hidden_for_tenant: false
+      }
+    ]);
+
+    if (error) {
+      console.error("sendMessageAsLandlord error", error);
+      setChatStatus(error.message || "Failed to send.", true);
+      return;
+    }
+
+    chatInputEl.value = "";
+    setChatStatus("Message sent.");
+    await loadMessagesForThread(listingId, "landlord");
+  }
+
+  // --------- СКРЫТИЕ ДИАЛОГА ---------
+
+  async function hideConversationForTenant() {
+    if (!confirm("Hide this conversation from your view? Messages will not be deleted.")) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ hidden_for_tenant: true })
+      .eq("listing_id", currentListing.id)
+      .eq("tenant_id", threadTenantId);
+
+    if (error) {
+      console.error("hideConversationForTenant error", error);
+      alert(error.message || "Failed to hide conversation.");
+      return;
+    }
+
+    chatMessagesEl.textContent = "Conversation hidden.";
+    document.getElementById("chatFooter").classList.add("hidden");
+  }
+
+  async function hideConversationForLandlord() {
+    if (!confirm("Hide this conversation from your inbox? Messages will not be deleted.")) {
+      return;
+    }
+
+    let query = supabase
+      .from("messages")
+      .update({ hidden_for_landlord: true })
+      .eq("listing_id", currentListing.id);
+
+    if (threadTenantId) {
+      query = query.eq("tenant_id", threadTenantId);
+    } else if (threadTenantEmail) {
+      query = query.eq("tenant_email", threadTenantEmail);
+    }
+
+    const { error } = await query;
+
+    if (error) {
+      console.error("hideConversationForLandlord error", error);
+      alert(error.message || "Failed to hide conversation.");
+      return;
+    }
+
+    chatMessagesEl.textContent = "Conversation hidden.";
+    document.getElementById("chatFooter").classList.add("hidden");
   }
 </script>
 </body>
