@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-  <div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="max-w-6xl mx-auto py-8 px-4">
     <header class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-slate-800">Landlord Dashboard</h1>
       <div class="flex items-center gap-3">
@@ -27,19 +27,32 @@
       <p id="statusMessage" class="text-sm mt-1"></p>
     </section>
 
+    <!-- INBOX ДИАЛОГОВ -->
     <section class="mb-6">
       <div class="bg-white rounded-2xl shadow p-5">
-        <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">
-          Inbox
-          <span id="inboxCount" class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hidden">0</span>
-        </h2>
-        <div id="inboxList" class="space-y-3 text-sm text-slate-700 max-h-64 overflow-y-auto">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold flex items-center gap-2">
+            Inbox
+            <span id="inboxCount"
+                  class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hidden">
+              0
+            </span>
+          </h2>
+          <button id="refreshInboxBtn"
+            class="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50">
+            Refresh
+          </button>
+        </div>
+        <div id="inboxList"
+             class="space-y-3 text-sm text-slate-700 max-h-80 overflow-y-auto">
           Loading messages...
         </div>
       </div>
     </section>
 
+    <!-- СОЗДАНИЕ + СПИСОК ОБЪЯВЛЕНИЙ -->
     <section class="grid md:grid-cols-2 gap-6">
+      <!-- СОЗДАНИЕ -->
       <div class="bg-white rounded-2xl shadow p-5">
         <h2 class="text-xl font-semibold mb-3">Add new listing</h2>
         <div class="space-y-2">
@@ -88,6 +101,7 @@
         </div>
       </div>
 
+      <!-- СПИСОК ОБЪЯВЛЕНИЙ -->
       <div class="bg-white rounded-2xl shadow p-5">
         <h2 class="text-xl font-semibold mb-3">My listings</h2>
         <div id="myListings" class="space-y-3 text-sm text-slate-700">
@@ -95,20 +109,76 @@
         </div>
       </div>
     </section>
+
+    <!-- РЕДАКТИРОВАНИЕ ОБЪЯВЛЕНИЯ -->
+    <section id="editSection" class="mt-6 hidden">
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-xl font-semibold">Edit listing</h2>
+          <button id="cancelEditBtn"
+            class="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50">
+            Cancel
+          </button>
+        </div>
+        <div class="space-y-2">
+          <input id="edit_title" type="text" placeholder="Title"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="edit_city" type="text" placeholder="City"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="edit_price" type="number" placeholder="Monthly price"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="edit_deposit" type="number" placeholder="Deposit amount (optional)"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <textarea id="edit_description" placeholder="Description"
+            class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+
+          <div class="flex flex-wrap gap-3 text-sm text-slate-700">
+            <label class="inline-flex items-center gap-1">
+              <input id="edit_has_wifi" type="checkbox" class="rounded border-slate-300" />
+              <span>Wi-Fi</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="edit_allow_pets" type="checkbox" class="rounded border-slate-300" />
+              <span>Pets allowed</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="edit_is_furnished" type="checkbox" class="rounded border-slate-300" />
+              <span>Furnished</span>
+            </label>
+            <label class="inline-flex items-center gap-1">
+              <input id="edit_is_active" type="checkbox" class="rounded border-slate-300" />
+              <span>Active</span>
+            </label>
+          </div>
+
+          <p class="text-xs text-slate-500">
+            Photo editing is not available yet. If you need different photos, create a new listing.
+          </p>
+
+          <button id="saveEditBtn"
+            class="w-full px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+            Save changes
+          </button>
+        </div>
+      </div>
+    </section>
   </div>
 
 <script>
   const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   let currentUser = null;
+  let editingListingId = null;
 
   function setStatus(text, isError = false) {
     const el = document.getElementById("statusMessage");
     if (!el) return;
     el.textContent = text || "";
-    el.className = "text-sm mt-1 " + (isError ? "text-red-600" : "text-emerald-600");
+    el.className =
+      "text-sm mt-1 " + (isError ? "text-red-600" : "text-emerald-600");
   }
 
   function safeUUID() {
@@ -121,100 +191,254 @@
 
   async function init() {
     // 1. Проверяем авторизацию
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data || !data.user) {
       window.location.href = "index.html";
       return;
     }
-    
-    // 2. Проверяем РОЛЬ (защита от арендаторов)
+
+    const user = data.user;
+
+    // 2. Проверяем роль
     const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-        
-    if (profile && profile.role !== 'landlord') {
-        // Если ты не лендлорд — иди искать квартиры
-        window.location.href = "tenant.html";
-        return;
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile && profile.role !== "landlord") {
+      window.location.href = "tenant.html";
+      return;
     }
 
     currentUser = user;
-    document.getElementById("welcome").textContent = `Welcome, ${currentUser.email}`;
+    document.getElementById("welcome").textContent =
+      `Welcome, ${currentUser.email}`;
 
-    // 3. Вешаем обработчик Logout
+    // Logout
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       document.getElementById("logoutBtn").textContent = "Logging out...";
       await supabase.auth.signOut();
       window.location.href = "index.html";
     });
 
-    // 4. Вешаем обработчик создания
-    document.getElementById("createBtn").addEventListener("click", onCreateListing);
+    document.getElementById("createBtn")
+      .addEventListener("click", onCreateListing);
 
-    // 5. Грузим данные
+    document.getElementById("refreshInboxBtn")
+      .addEventListener("click", loadInboxThreads);
+
+    document.getElementById("cancelEditBtn")
+      .addEventListener("click", () => {
+        editingListingId = null;
+        document.getElementById("editSection").classList.add("hidden");
+      });
+
+    document.getElementById("saveEditBtn")
+      .addEventListener("click", saveEditListing);
+
+    // Первичная загрузка
     loadMyListings();
-    loadInbox();
+    loadInboxThreads();
   }
 
-  // --- ЛОГИКА ЗАГРУЗКИ СООБЩЕНИЙ ---
-  async function loadInbox() {
+  // ---------- INBOX: диалоги ----------
+
+  async function loadInboxThreads() {
     const container = document.getElementById("inboxList");
     const countBadge = document.getElementById("inboxCount");
-    
+    container.textContent = "Loading messages...";
+
     const { data, error } = await supabase
       .from("messages")
-      .select("*, listing(title, city)")
+      .select(`
+        id,
+        created_at,
+        message,
+        tenant_id,
+        tenant_email,
+        is_from_landlord,
+        is_read_by_landlord,
+        hidden_for_landlord,
+        listing_id,
+        listing (
+          title,
+          city
+        )
+      `)
+      .eq("hidden_for_landlord", false)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Inbox error", error);
-      container.textContent = "Error loading messages.";
+      container.textContent = error.message || "Error loading messages.";
+      if (countBadge) {
+        countBadge.classList.add("hidden");
+      }
       return;
     }
 
     if (!data || data.length === 0) {
       container.textContent = "No messages yet.";
+      if (countBadge) {
+        countBadge.classList.add("hidden");
+      }
       return;
     }
 
-    if (countBadge) {
-      countBadge.textContent = data.length;
-      countBadge.classList.remove("hidden");
-    }
-    container.innerHTML = "";
-    
+    // Группируем по (listing_id + tenant_id/tenant_email)
+    const threadsMap = new Map();
+
     data.forEach(msg => {
+      const listingId = msg.listing_id;
+      const tenantKey =
+        msg.tenant_id || ("email:" + (msg.tenant_email || "guest"));
+      const key = `${listingId}|${tenantKey}`;
+
+      let thread = threadsMap.get(key);
+      if (!thread) {
+        thread = {
+          listing_id: listingId,
+          listing: msg.listing || { title: "(no title)", city: "" },
+          tenant_id: msg.tenant_id || null,
+          tenant_email: msg.tenant_email || "",
+          lastMessageAt: msg.created_at,
+          lastMessageText: msg.message || "",
+          unreadCount: 0
+        };
+        threadsMap.set(key, thread);
+      }
+
+      // Последнее сообщение
+      if (new Date(msg.created_at) > new Date(thread.lastMessageAt)) {
+        thread.lastMessageAt = msg.created_at;
+        thread.lastMessageText = msg.message || "";
+      }
+
+      // Непрочитанные для лендлорда — сообщения от тенанта
+      if (!msg.is_from_landlord && !msg.is_read_by_landlord) {
+        thread.unreadCount += 1;
+      }
+    });
+
+    const threads = Array.from(threadsMap.values())
+      .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+
+    container.innerHTML = "";
+
+    if (countBadge) {
+      const totalUnread = threads.reduce((acc, t) => acc + t.unreadCount, 0);
+      if (totalUnread > 0) {
+        countBadge.textContent = totalUnread;
+        countBadge.classList.remove("hidden");
+      } else {
+        countBadge.classList.add("hidden");
+      }
+    }
+
+    threads.forEach(thread => {
       const div = document.createElement("div");
-      div.className = "border-b last:border-0 pb-3 mb-3 hover:bg-slate-50 p-2 rounded transition";
-      const listingTitle = msg.listing ? `${msg.listing.title}` : "Unknown listing";
+      div.className =
+        "border rounded-xl p-3 flex flex-col gap-1 hover:bg-slate-50 transition";
+
+      const title = thread.listing.title || "(no title)";
+      const city = thread.listing.city || "";
+      const email = thread.tenant_email || (thread.tenant_id ? "(registered tenant)" : "(guest)");
+      const dt = new Date(thread.lastMessageAt).toLocaleString();
+
+      const unreadBadge = thread.unreadCount
+        ? `<span class="ml-2 bg-rose-100 text-rose-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">${thread.unreadCount} new</span>`
+        : "";
+
+      const params = new URLSearchParams();
+      params.set("id", thread.listing_id);
+      if (thread.tenant_id) {
+        params.set("tenant_id", thread.tenant_id);
+      } else if (thread.tenant_email) {
+        params.set("tenant_email", thread.tenant_email);
+      }
+
+      const chatUrl = `listing-details.html?${params.toString()}`;
+
       div.innerHTML = `
-        <div class="flex justify-between mb-1">
-           <span class="font-bold text-xs text-emerald-700 uppercase">${listingTitle}</span>
-           <span class="text-xs text-slate-400">${new Date(msg.created_at).toLocaleDateString()}</span>
+        <div class="flex justify-between items-center">
+          <div class="font-semibold text-sm">
+            ${title} — ${city}
+            ${unreadBadge}
+          </div>
+          <div class="text-[11px] text-slate-400">${dt}</div>
         </div>
-        <div class="font-medium text-sm mb-1">From: ${msg.tenant_email || "Guest"}</div>
-        <div class="text-slate-600 bg-slate-50 p-2 rounded text-sm italic border">${msg.message}</div>
+        <div class="text-xs text-slate-500 mb-1">
+          Tenant: ${email}
+        </div>
+        <div class="text-xs text-slate-700 line-clamp-2 mb-2">
+          ${thread.lastMessageText || ""}
+        </div>
+        <div class="flex justify-end gap-2">
+          <button class="px-3 py-1 text-xs rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100"
+                  data-action="open"
+          >
+            Open chat
+          </button>
+          <button class="px-3 py-1 text-xs rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50"
+                  data-action="hide"
+          >
+            Hide
+          </button>
+        </div>
       `;
+
+      div.querySelector('[data-action="open"]').addEventListener("click", () => {
+        window.location.href = chatUrl;
+      });
+
+      div.querySelector('[data-action="hide"]').addEventListener("click", () => {
+        hideThread(thread);
+      });
+
       container.appendChild(div);
     });
   }
 
-  // --- ЛОГИКА ЗАГРУЗКИ ФОТО ---
+  async function hideThread(thread) {
+    if (!confirm("Hide this conversation from your inbox?")) return;
+
+    const filters = supabase
+      .from("messages")
+      .update({ hidden_for_landlord: true })
+      .eq("listing_id", thread.listing_id);
+
+    if (thread.tenant_id) {
+      filters.eq("tenant_id", thread.tenant_id);
+    } else if (thread.tenant_email) {
+      filters.eq("tenant_email", thread.tenant_email).is("tenant_id", null);
+    }
+
+    const { error } = await filters;
+
+    if (error) {
+      console.error("hideThread error", error);
+      alert(error.message || "Failed to hide conversation.");
+      return;
+    }
+
+    loadInboxThreads();
+  }
+
+  // ---------- ЗАГРУЗКА ФОТО ----------
+
   async function uploadPhotos(files) {
     const urls = [null, null, null, null];
     const max = Math.min(files.length, 4);
 
     for (let i = 0; i < max; i++) {
       const file = files[i];
-      const ext = file.name.split('.').pop();
+      const ext = file.name.split(".").pop();
       const fileName = `${currentUser.id}/${safeUUID()}.${ext}`;
 
-      // Upload
       const { error: upErr } = await supabase.storage
-        .from('listing-photos')
+        .from("listing-photos")
         .upload(fileName, file);
 
       if (upErr) {
@@ -222,22 +446,21 @@
         throw upErr;
       }
 
-      // Get URL
       const { data: pubData } = supabase.storage
-        .from('listing-photos')
+        .from("listing-photos")
         .getPublicUrl(fileName);
-        
+
       urls[i] = pubData.publicUrl;
     }
     return urls;
   }
 
-  // --- ЛОГИКА СОЗДАНИЯ ОБЪЯВЛЕНИЯ ---
+  // ---------- СОЗДАНИЕ ОБЪЯВЛЕНИЯ ----------
+
   async function onCreateListing() {
     setStatus("");
     const btn = document.getElementById("createBtn");
-    
-    // Сбор данных
+
     const title = document.getElementById("title").value.trim();
     const city = document.getElementById("city").value.trim();
     const price = document.getElementById("price").value;
@@ -246,93 +469,240 @@
     const files = document.getElementById("photos").files;
 
     if (!title || !city || !price) {
-        setStatus("Title, City and Price are required!", true);
-        return;
+      setStatus("Title, City and Price are required!", true);
+      return;
     }
 
     btn.disabled = true;
     btn.textContent = "Saving...";
 
     try {
-        // 1. Грузим фото (если есть)
-        let urls = [null, null, null, null];
-        if (files.length > 0) {
-            setStatus("Uploading photos...");
-            urls = await uploadPhotos(files);
+      let urls = [null, null, null, null];
+      if (files.length > 0) {
+        setStatus("Uploading photos...");
+        urls = await uploadPhotos(files);
+      }
+
+      setStatus("Saving data...");
+      const { error } = await supabase.from("listing").insert([
+        {
+          owner_id: currentUser.id,
+          title: title,
+          city: city,
+          price_per_month: parseInt(price),
+          deposit_amount: deposit ? parseInt(deposit) : null,
+          description: desc,
+          has_wifi: document.getElementById("has_wifi").checked,
+          allow_pets: document.getElementById("allow_pets").checked,
+          is_furnished: document.getElementById("is_furnished").checked,
+          is_active: document.getElementById("is_active").checked,
+          main_photo_url: urls[0],
+          photo2_url: urls[1],
+          photo3_url: urls[2],
+          photo4_url: urls[3]
         }
+      ]);
 
-        // 2. Пишем в БД
-        setStatus("Saving data...");
-        const { error } = await supabase.from('listing').insert([{
-            owner_id: currentUser.id,
-            title: title,
-            city: city,
-            price_per_month: parseInt(price),
-            deposit_amount: deposit ? parseInt(deposit) : null,
-            description: desc,
-            has_wifi: document.getElementById("has_wifi").checked,
-            allow_pets: document.getElementById("allow_pets").checked,
-            is_furnished: document.getElementById("is_furnished").checked,
-            is_active: document.getElementById("is_active").checked,
-            main_photo_url: urls[0],
-            photo2_url: urls[1],
-            photo3_url: urls[2],
-            photo4_url: urls[3]
-        }]);
+      if (error) throw error;
 
-        if (error) throw error;
+      setStatus("Success! Listing created.");
 
-        setStatus("Success! Listing created.");
-        // Чистим форму
-        document.getElementById("title").value = "";
-        document.getElementById("city").value = "";
-        document.getElementById("price").value = "";
-        document.getElementById("description").value = "";
-        document.getElementById("photos").value = "";
-        loadMyListings();
+      document.getElementById("title").value = "";
+      document.getElementById("city").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("deposit").value = "";
+      document.getElementById("description").value = "";
+      document.getElementById("photos").value = "";
+      document.getElementById("has_wifi").checked = false;
+      document.getElementById("allow_pets").checked = false;
+      document.getElementById("is_furnished").checked = false;
+      document.getElementById("is_active").checked = true;
 
+      loadMyListings();
     } catch (e) {
-        console.error(e);
-        setStatus("Error: " + e.message, true);
+      console.error(e);
+      setStatus("Error: " + e.message, true);
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Save listing";
+      btn.disabled = false;
+      btn.textContent = "Save listing";
     }
   }
 
-  // --- СПИСОК МОИХ ОБЪЯВЛЕНИЙ ---
+  // ---------- СПИСОК ОБЪЯВЛЕНИЙ ----------
+
   async function loadMyListings() {
     const container = document.getElementById("myListings");
+    container.textContent = "Loading...";
+
     const { data, error } = await supabase
-        .from('listing')
-        .select('*')
-        .eq('owner_id', currentUser.id)
-        .order('created_at', { ascending: false });
+      .from("listing")
+      .select("*")
+      .eq("owner_id", currentUser.id)
+      .order("created_at", { ascending: false });
 
     if (error) {
-        container.textContent = "Error loading listings";
-        return;
+      console.error("loadMyListings error", error);
+      container.textContent = "Error loading listings";
+      return;
     }
+
     if (!data.length) {
-        container.textContent = "No listings yet.";
-        return;
+      container.textContent = "No listings yet.";
+      return;
     }
 
     container.innerHTML = "";
     data.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "flex gap-3 border p-2 rounded-xl mb-2 items-center hover:bg-slate-50 cursor-pointer";
-        const img = item.main_photo_url || "https://via.placeholder.com/60";
-        div.innerHTML = `
-            <img src="${img}" class="w-12 h-12 rounded bg-slate-200 object-cover">
-            <div>
-                <div class="font-bold text-sm">${item.title}</div>
-                <div class="text-xs text-slate-500">$${item.price_per_month} • ${item.city}</div>
-            </div>
-        `;
-        div.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
-        container.appendChild(div);
+      const div = document.createElement("div");
+      div.className =
+        "flex gap-3 border p-3 rounded-xl mb-2 items-center hover:bg-slate-50";
+
+      const img = item.main_photo_url || "https://via.placeholder.com/60";
+
+      const activeBadge = item.is_active
+        ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Active</span>'
+        : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">Inactive</span>';
+
+      div.innerHTML = `
+        <img src="${img}" class="w-12 h-12 rounded bg-slate-200 object-cover">
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <div class="font-bold text-sm">${item.title}</div>
+            ${activeBadge}
+          </div>
+          <div class="text-xs text-slate-500">
+            $${item.price_per_month} • ${item.city}
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 text-xs">
+          <button class="px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100"
+                  data-action="view">
+            View
+          </button>
+          <button class="px-3 py-1 rounded-full border border-blue-300 text-blue-700 hover:bg-blue-50"
+                  data-action="edit">
+            Edit
+          </button>
+          <button class="px-3 py-1 rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50"
+                  data-action="toggle">
+            ${item.is_active ? "Deactivate" : "Activate"}
+          </button>
+          <button class="px-3 py-1 rounded-full border border-red-300 text-red-700 hover:bg-red-50"
+                  data-action="delete">
+            Delete
+          </button>
+        </div>
+      `;
+
+      div.querySelector('[data-action="view"]').addEventListener("click", () => {
+        window.location.href = `listing-details.html?id=${item.id}`;
+      });
+
+      div.querySelector('[data-action="edit"]').addEventListener("click", () => {
+        startEditListing(item);
+      });
+
+      div.querySelector('[data-action="toggle"]').addEventListener("click", () => {
+        toggleListingActive(item);
+      });
+
+      div.querySelector('[data-action="delete"]').addEventListener("click", () => {
+        deleteListing(item);
+      });
+
+      container.appendChild(div);
     });
+  }
+
+  function startEditListing(item) {
+    editingListingId = item.id;
+    document.getElementById("edit_title").value = item.title || "";
+    document.getElementById("edit_city").value = item.city || "";
+    document.getElementById("edit_price").value = item.price_per_month || "";
+    document.getElementById("edit_deposit").value =
+      item.deposit_amount != null ? item.deposit_amount : "";
+    document.getElementById("edit_description").value =
+      item.description || "";
+    document.getElementById("edit_has_wifi").checked = !!item.has_wifi;
+    document.getElementById("edit_allow_pets").checked = !!item.allow_pets;
+    document.getElementById("edit_is_furnished").checked = !!item.is_furnished;
+    document.getElementById("edit_is_active").checked = item.is_active !== false;
+
+    document.getElementById("editSection").classList.remove("hidden");
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  async function saveEditListing() {
+    if (!editingListingId) return;
+
+    const payload = {
+      title: document.getElementById("edit_title").value.trim(),
+      city: document.getElementById("edit_city").value.trim(),
+      price_per_month: parseInt(document.getElementById("edit_price").value) || null,
+      deposit_amount: document.getElementById("edit_deposit").value
+        ? parseInt(document.getElementById("edit_deposit").value)
+        : null,
+      description: document.getElementById("edit_description").value,
+      has_wifi: document.getElementById("edit_has_wifi").checked,
+      allow_pets: document.getElementById("edit_allow_pets").checked,
+      is_furnished: document.getElementById("edit_is_furnished").checked,
+      is_active: document.getElementById("edit_is_active").checked
+    };
+
+    const { error } = await supabase
+      .from("listing")
+      .update(payload)
+      .eq("id", editingListingId)
+      .eq("owner_id", currentUser.id);
+
+    if (error) {
+      console.error("saveEditListing error", error);
+      alert(error.message || "Failed to update listing.");
+      return;
+    }
+
+    editingListingId = null;
+    document.getElementById("editSection").classList.add("hidden");
+    loadMyListings();
+    setStatus("Listing updated.");
+  }
+
+  async function toggleListingActive(item) {
+    const newValue = !item.is_active;
+    const { error } = await supabase
+      .from("listing")
+      .update({ is_active: newValue })
+      .eq("id", item.id)
+      .eq("owner_id", currentUser.id);
+
+    if (error) {
+      console.error("toggleListingActive error", error);
+      alert(error.message || "Failed to change status.");
+      return;
+    }
+
+    loadMyListings();
+  }
+
+  async function deleteListing(item) {
+    if (!confirm("Delete this listing? This may also remove related messages (if cascade is enabled).")) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("listing")
+      .delete()
+      .eq("id", item.id)
+      .eq("owner_id", currentUser.id);
+
+    if (error) {
+      console.error("deleteListing error", error);
+      alert(error.message || "Failed to delete listing. Check foreign key cascades.");
+      return;
+    }
+
+    loadMyListings();
+    setStatus("Listing deleted.");
   }
 </script>
 </body>
