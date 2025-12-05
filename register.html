@@ -73,6 +73,16 @@
   const errorMsg = document.getElementById("errorMsg");
   const successMsg = document.getElementById("successMsg");
 
+  function showError(text) {
+    errorMsg.textContent = text;
+    errorMsg.classList.remove("hidden");
+  }
+
+  function resetBtn() {
+    registerBtn.disabled = false;
+    registerBtn.textContent = "Sign Up";
+  }
+
   registerBtn.addEventListener("click", async () => {
     errorMsg.classList.add("hidden");
     successMsg.classList.add("hidden");
@@ -91,58 +101,29 @@
     }
 
     try {
-      // 1. Регистрация (Auth) через window.sb
-      const { data: authData, error: authError } = await window.sb.auth.signUp({
-        email,
-        password
-      });
+      // === ВНЕСЕННЫЕ ИЗМЕНЕНИЯ ===
+      // Используем готовую функцию register из твоего файла supabase.js
+      const { data, error } = await window.sb.register(email, password, role);
 
-      if (authError) throw authError;
-
-      if (authData && authData.user) {
-        const userId = authData.user.id;
-
-        // 2. Создание профиля (DB) через window.sb
-        const { error: profileError } = await window.sb
-          .from("profiles")
-          .insert([{ id: userId, role: role }]);
-
-        if (profileError) {
-          console.error("Profile error", profileError);
-          // Аккаунт создан, но профиль нет. Критическая ошибка логики, но юзер уже есть.
-          showError("Account created, but profile setup failed. Contact support.");
-          resetBtn();
-          return;
-        }
-
-        // УСПЕХ
-        successMsg.textContent = "Success! Redirecting to login...";
-        successMsg.classList.remove("hidden");
-        
-        setTimeout(() => {
-          window.location.href = "index.html";
-        }, 1500);
-
-      } else {
-        showError("Check your email for confirmation link (if enabled).");
-        resetBtn();
+      if (error) {
+         // Пробрасываем ошибку дальше в catch
+         throw error;
       }
+
+      // Если ошибок нет - успех
+      successMsg.textContent = "Success! Redirecting to login...";
+      successMsg.classList.remove("hidden");
+      
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1500);
+
     } catch (err) {
       console.error(err);
       showError(err.message || "Registration failed.");
       resetBtn();
     }
   });
-
-  function showError(text) {
-    errorMsg.textContent = text;
-    errorMsg.classList.remove("hidden");
-  }
-
-  function resetBtn() {
-    registerBtn.disabled = false;
-    registerBtn.textContent = "Sign Up";
-  }
 </script>
 </body>
 </html>
