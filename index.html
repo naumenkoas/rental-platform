@@ -2,150 +2,434 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sign in</title>
+  <title>Rental marketplace – Home</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center">
-  <div class="w-full max-w-md bg-white rounded-2xl shadow p-8">
-    <h1 class="text-2xl font-bold text-slate-800 mb-4 text-center">Sign in</h1>
+<body class="bg-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto py-8 px-4">
+    <!-- HEADER -->
+    <header class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-800">Rental marketplace</h1>
+        <p class="text-sm text-slate-600">
+          Browse listings as a guest. Login or sign up to contact landlords and manage listings.
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <a href="#public-search"
+           class="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 text-sm font-semibold hover:bg-slate-50 transition">
+          Browse as guest
+        </a>
+        <a href="register.html"
+           class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+          Sign up
+        </a>
+      </div>
+    </header>
 
-    <p id="status" class="text-sm text-slate-600 mb-3"></p>
+    <!-- LOGIN / USER STATUS -->
+    <section class="mb-6 grid md:grid-cols-[1.3fr,2fr] gap-4">
+      <!-- LOGIN CARD -->
+      <div class="bg-white rounded-2xl shadow p-5">
+        <h2 class="text-lg font-semibold mb-3">Sign in</h2>
+        <div id="userInfo" class="text-sm text-slate-600 mb-3 hidden"></div>
 
-    <!-- Форма по умолчанию скрыта: покажем её только если нет активной сессии -->
-    <form id="loginForm" class="space-y-3 hidden">
-      <input id="email" type="email" placeholder="Email"
-        class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        <div id="loginForm" class="space-y-2">
+          <input id="loginEmail" type="email" placeholder="Email"
+                 class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="loginPassword" type="password" placeholder="Password"
+                 class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <button id="loginBtn"
+                  class="w-full px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition">
+            Log in
+          </button>
+          <p class="text-xs text-slate-500">
+            New here?
+            <a href="register.html" class="text-emerald-700 underline">Create an account</a>
+          </p>
+          <p id="loginStatus" class="text-xs mt-1 text-slate-500"></p>
+        </div>
 
-      <input id="password" type="password" placeholder="Password"
-        class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        <div id="loggedInActions" class="space-y-2 hidden">
+          <div class="flex flex-col gap-1 text-sm text-slate-700 mb-2">
+            <p>You are logged in.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="goDashboardBtn"
+                    class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+              Go to dashboard
+            </button>
+            <button id="logoutBtn"
+                    class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+              Log out
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <button type="submit"
-        class="w-full px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-        Sign in
-      </button>
-    </form>
+      <!-- SHORT EXPLANATION / CTA -->
+      <div class="bg-white rounded-2xl shadow p-5 flex flex-col justify-between">
+        <div class="space-y-2 text-sm text-slate-700">
+          <h2 class="text-lg font-semibold mb-1">How it works</h2>
+          <p>• Guests can browse all public listings without registration.</p>
+          <p>• Tenants can sign up, save filters and chat with landlords.</p>
+          <p>• Landlords can create, edit, activate/deactivate listings and handle messages in their dashboard.</p>
+        </div>
+        <div class="mt-4 text-xs text-slate-500">
+          Tip: search engines see this page as public, so all listings here help SEO.
+        </div>
+      </div>
+    </section>
 
-    <p class="text-xs text-slate-600 mt-4 text-center">
-      No account?
-      <a href="register.html"
-         class="text-emerald-700 font-semibold hover:underline">
-        Sign up
-      </a>
-    </p>
+    <!-- PUBLIC SEARCH SECTION -->
+    <section id="public-search" class="mb-6 bg-white rounded-2xl shadow p-5">
+      <h2 class="text-lg font-semibold mb-3">Search rentals</h2>
+
+      <!-- FILTERS -->
+      <div class="grid md:grid-cols-4 gap-3 mb-3 text-sm">
+        <input id="filterCity" type="text" placeholder="City"
+               class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="filterMinPrice" type="number" placeholder="Min price"
+               class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="filterMaxPrice" type="number" placeholder="Max price"
+               class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <label class="flex items-center gap-1 text-sm text-slate-700">
+          <input id="filterActive" type="checkbox" class="rounded border-slate-300" checked />
+          <span>Only active</span>
+        </label>
+      </div>
+
+      <div class="flex flex-wrap gap-3 text-sm mb-3">
+        <label class="inline-flex items-center gap-1">
+          <input id="filterWifi" type="checkbox" class="rounded border-slate-300" />
+          <span>Wi-Fi</span>
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input id="filterPets" type="checkbox" class="rounded border-slate-300" />
+          <span>Pets allowed</span>
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input id="filterFurnished" type="checkbox" class="rounded border-slate-300" />
+          <span>Furnished</span>
+        </label>
+      </div>
+
+      <div class="flex gap-3 mb-4">
+        <button id="applyFiltersBtn"
+                class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+          Apply filters
+        </button>
+        <button id="resetFiltersBtn"
+                class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+          Reset
+        </button>
+      </div>
+
+      <!-- LISTINGS -->
+      <div id="listingsContainer"
+           class="grid md:grid-cols-3 gap-4 text-sm text-slate-700">
+        Loading...
+      </div>
+    </section>
   </div>
 
 <script>
   const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
   const supabaseKey =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  const statusEl   = document.getElementById("status");
-  const formEl     = document.getElementById("loginForm");
-  const emailInput = document.getElementById("email");
-  const passInput  = document.getElementById("password");
+  const loginEmailEl = document.getElementById("loginEmail");
+  const loginPasswordEl = document.getElementById("loginPassword");
+  const loginBtnEl = document.getElementById("loginBtn");
+  const loginStatusEl = document.getElementById("loginStatus");
+  const userInfoEl = document.getElementById("userInfo");
+  const loginFormEl = document.getElementById("loginForm");
+  const loggedInActionsEl = document.getElementById("loggedInActions");
+  const goDashboardBtn = document.getElementById("goDashboardBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-  function setStatus(text, isError = false) {
-    statusEl.textContent = text || "";
-    statusEl.className =
-      "text-sm mb-3 " + (isError ? "text-red-600" : "text-slate-600");
+  function setLoginStatus(text, isError = false) {
+    loginStatusEl.textContent = text || "";
+    loginStatusEl.className =
+      "text-xs mt-1 " + (isError ? "text-red-600" : "text-slate-500");
   }
 
-  // При загрузке страницы: сначала проверяем, есть ли уже залогиненный пользователь
   window.addEventListener("load", () => {
-    checkExistingSession().catch(err => {
-      console.error("checkExistingSession error", err);
-      // Если что-то пошло не так, хотя бы покажем форму логина
-      formEl.classList.remove("hidden");
-      setStatus("");
-    });
-
-    // Обработчик логина
-    formEl.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      await handleLogin();
-    });
+    initAuthAndUI();
+    initPublicSearch();
   });
 
-  async function checkExistingSession() {
-    setStatus("Checking session...");
-    const { data, error } = await supabase.auth.getUser();
+  // ---------- AUTH + LOGIN ЛОГИКА ----------
 
-    if (error || !data || !data.user) {
-      // Сессии нет — показываем форму
-      formEl.classList.remove("hidden");
-      setStatus("");
-      return;
+  async function initAuthAndUI() {
+    // если юзер уже залогинен – сразу в дашборд, как раньше
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data && data.user) {
+      const user = data.user;
+      const { data: profile, error: pErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!pErr && profile && profile.role) {
+        // автопереход как и раньше – UX для живых, SEO не страдает, потому что боты не логинятся
+        if (profile.role === "landlord") {
+          window.location.href = "landlord.html";
+          return;
+        } else if (profile.role === "tenant") {
+          window.location.href = "tenant.html";
+          return;
+        }
+      }
+
+      // На всякий случай fallback: показать состояние "залогинен"
+      showLoggedInUI(user, profile ? profile.role : null);
+    } else {
+      showLoggedOutUI();
     }
 
-    // Сессия есть — сразу редирект по роли
-    await redirectByRole(data.user.id);
+    loginBtnEl.addEventListener("click", onLogin);
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", onLogout);
+    }
   }
 
-  async function handleLogin() {
-    const email = emailInput.value.trim();
-    const password = passInput.value.trim();
+  function showLoggedOutUI() {
+    userInfoEl.classList.add("hidden");
+    loginFormEl.classList.remove("hidden");
+    loggedInActionsEl.classList.add("hidden");
+  }
+
+  function showLoggedInUI(user, role) {
+    const roleLabel = role ? `(${role})` : "";
+    userInfoEl.textContent = `Logged in as ${user.email} ${roleLabel}`;
+    userInfoEl.classList.remove("hidden");
+
+    loginFormEl.classList.add("hidden");
+    loggedInActionsEl.classList.remove("hidden");
+
+    if (goDashboardBtn) {
+      goDashboardBtn.onclick = () => {
+        if (role === "landlord") {
+          window.location.href = "landlord.html";
+        } else if (role === "tenant") {
+          window.location.href = "tenant.html";
+        } else {
+          window.location.href = "tenant.html";
+        }
+      };
+    }
+  }
+
+  async function onLogin() {
+    const email = loginEmailEl.value.trim();
+    const password = loginPasswordEl.value;
 
     if (!email || !password) {
-      setStatus("Email and password are required.", true);
+      setLoginStatus("Email and password are required.", true);
       return;
     }
 
-    setStatus("Signing in...");
+    setLoginStatus("Signing in...");
+    loginBtnEl.disabled = true;
+    loginBtnEl.textContent = "Signing in...";
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      console.error("signIn error", error);
-      setStatus(error.message || "Failed to sign in.", true);
-      return;
+      if (error || !data || !data.user) {
+        throw error || new Error("Invalid login credentials.");
+      }
+
+      const user = data.user;
+
+      const { data: profile, error: pErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (pErr || !profile || !profile.role) {
+        throw pErr || new Error("User profile role not found.");
+      }
+
+      const role = profile.role;
+      setLoginStatus("Login successful. Redirecting...");
+
+      if (role === "landlord") {
+        window.location.href = "landlord.html";
+      } else if (role === "tenant") {
+        window.location.href = "tenant.html";
+      } else {
+        window.location.href = "tenant.html";
+      }
+    } catch (e) {
+      console.error("login error", e);
+      setLoginStatus(
+        e && e.message ? e.message : "Login failed. Check credentials.",
+        true
+      );
+    } finally {
+      loginBtnEl.disabled = false;
+      loginBtnEl.textContent = "Log in";
     }
-
-    const user = data?.user;
-    if (!user) {
-      setStatus("No user returned from Supabase.", true);
-      return;
-    }
-
-    await redirectByRole(user.id);
   }
 
-  // Жёсткий редирект по роли из таблицы profiles
-  async function redirectByRole(userId) {
-    setStatus("Loading profile...");
+  async function onLogout() {
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = "Logging out...";
+    await supabase.auth.signOut();
+    window.location.href = "index.html";
+  }
 
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
+  // ---------- PUBLIC SEARCH / LISTINGS ----------
+
+  function initPublicSearch() {
+    document
+      .getElementById("applyFiltersBtn")
+      .addEventListener("click", loadListings);
+    document
+      .getElementById("resetFiltersBtn")
+      .addEventListener("click", resetFilters);
+
+    loadListings();
+  }
+
+  function resetFilters() {
+    document.getElementById("filterCity").value = "";
+    document.getElementById("filterMinPrice").value = "";
+    document.getElementById("filterMaxPrice").value = "";
+    document.getElementById("filterActive").checked = true;
+    document.getElementById("filterWifi").checked = false;
+    document.getElementById("filterPets").checked = false;
+    document.getElementById("filterFurnished").checked = false;
+    loadListings();
+  }
+
+  async function loadListings() {
+    const container = document.getElementById("listingsContainer");
+    container.textContent = "Loading...";
+
+    let query = supabase
+      .from("listing")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    const city = document.getElementById("filterCity").value.trim();
+    const minPrice = document.getElementById("filterMinPrice").value;
+    const maxPrice = document.getElementById("filterMaxPrice").value;
+    const onlyActive = document.getElementById("filterActive").checked;
+    const wifi = document.getElementById("filterWifi").checked;
+    const pets = document.getElementById("filterPets").checked;
+    const furnished = document.getElementById("filterFurnished").checked;
+
+    if (city) {
+      query = query.ilike("city", `%${city}%`);
+    }
+    if (minPrice) {
+      const val = parseInt(minPrice, 10);
+      if (!Number.isNaN(val)) query = query.gte("price_per_month", val);
+    }
+    if (maxPrice) {
+      const val = parseInt(maxPrice, 10);
+      if (!Number.isNaN(val)) query = query.lte("price_per_month", val);
+    }
+    if (onlyActive) {
+      query = query.eq("is_active", true);
+    }
+    if (wifi) {
+      query = query.eq("has_wifi", true);
+    }
+    if (pets) {
+      query = query.eq("allow_pets", true);
+    }
+    if (furnished) {
+      query = query.eq("is_furnished", true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      console.error("profile load error", error);
-      setStatus("Failed to load profile.", true);
-      formEl.classList.remove("hidden");
+      console.error("loadListings error", error);
+      container.textContent = error.message || "Error loading listings.";
       return;
     }
 
-    if (!profile || !profile.role) {
-      setStatus("User role is not set in profiles.", true);
-      formEl.classList.remove("hidden");
+    if (!data || !data.length) {
+      container.textContent = "No listings match your filters.";
       return;
     }
 
-    if (profile.role === "landlord") {
-      window.location.replace("landlord.html");
-    } else if (profile.role === "tenant") {
-      window.location.replace("tenant.html");
-    } else {
-      setStatus("Unknown role: " + profile.role, true);
-      formEl.classList.remove("hidden");
-    }
+    container.innerHTML = "";
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.className =
+        "border rounded-2xl p-3 flex flex-col gap-2 hover:bg-slate-50 transition";
+
+      const img = document.createElement("img");
+      img.src = item.main_photo_url || "https://via.placeholder.com/160";
+      img.alt = item.title || "listing photo";
+      img.className = "w-full h-32 object-cover rounded-xl bg-slate-200";
+
+      const title = document.createElement("div");
+      title.className = "font-semibold text-sm";
+      title.textContent = item.title || "(no title)";
+
+      const cityEl = document.createElement("div");
+      cityEl.className = "text-xs text-slate-500";
+      cityEl.textContent = item.city || "";
+
+      const price = document.createElement("div");
+      price.className = "text-sm font-semibold text-emerald-700";
+      price.textContent =
+        item.price_per_month != null ? item.price_per_month + " / month" : "";
+
+      const flags = [];
+      if (item.has_wifi) flags.push("Wi-Fi");
+      if (item.allow_pets) flags.push("Pets");
+      if (item.is_furnished) flags.push("Furnished");
+      if (item.is_active === false) flags.push("Inactive");
+      const flagLine = document.createElement("div");
+      flagLine.className = "text-[11px] text-slate-500";
+      flagLine.textContent = flags.join(" • ");
+
+      const btnRow = document.createElement("div");
+      btnRow.className = "flex gap-2 mt-1";
+
+      const viewBtn = document.createElement("button");
+      viewBtn.className =
+        "flex-1 px-3 py-1 rounded-full border border-slate-300 text-slate-700 text-xs hover:bg-slate-100";
+      viewBtn.textContent = "View details";
+      viewBtn.addEventListener("click", () => {
+        window.location.href = `listing-details.html?id=${item.id}`;
+      });
+
+      const contactBtn = document.createElement("button");
+      contactBtn.className =
+        "flex-1 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs hover:bg-emerald-700";
+      contactBtn.textContent = "Open dialog";
+      contactBtn.addEventListener("click", () => {
+        window.location.href = `listing-details.html?id=${item.id}`;
+      });
+
+      btnRow.appendChild(viewBtn);
+      btnRow.appendChild(contactBtn);
+
+      card.appendChild(img);
+      card.appendChild(title);
+      card.appendChild(cityEl);
+      card.appendChild(price);
+      card.appendChild(flagLine);
+      card.appendChild(btnRow);
+
+      container.appendChild(card);
+    });
   }
 </script>
 </body>
