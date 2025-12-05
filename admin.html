@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | Аренда Жилья</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+
+    <nav class="bg-gray-800 border-b border-gray-700 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-red-500">ADMIN DASHBOARD</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="adminEmail" class="text-sm text-gray-300"></span>
+                    <button onclick="window.sb.logout()" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-2">Управление пользователями</h2>
+            
+            <div class="flex gap-4 mb-6">
+                <input type="text" id="userSearch" placeholder="Поиск по ID или (частично реализовано) Email..." class="flex-1 bg-gray-800 border border-gray-700 rounded-md py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-red-500">
+                <button onclick="loadUsers()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md">Обновить список</button>
+            </div>
+
+            <div class="overflow-x-auto bg-gray-800 rounded-lg shadow">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Роль</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Статус</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="divide-y divide-gray-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-2">Мониторинг сообщений</h2>
+            <div class="bg-gray-800 rounded-lg shadow p-4 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs text-gray-300">Дата</th>
+                            <th class="px-4 py-2 text-left text-xs text-gray-300">От кого (Tenant Email)</th>
+                            <th class="px-4 py-2 text-left text-xs text-gray-300">Сообщение</th>
+                            <th class="px-4 py-2 text-left text-xs text-gray-300">Тип</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messagesTableBody" class="divide-y divide-gray-700 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentUser = await window.sb.requireAuth(['admin']); // Только админы
+            if (!currentUser) return;
+
+            // Отображаем email админа (приходится делать доп запрос, т.к. в профиле email нет, он в auth)
+            const { data: { user } } = await window.sb.client.auth.getUser();
+            document.getElementById('adminEmail').textContent = user.email;
+
+            loadUsers();
+            loadMessages();
+        });
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">Загрузка...</td></tr>';
+
+            const searchQuery = document.getElementById('userSearch').value;
+
+            // Запрос всех профилей
+            let query = window.sb.client
+                .from('profiles')
+                .select('*')
+                .order('role', { ascending: true });
+            
+            // Простая фильтрация по ID (Supabase не дает искать по email в profiles если мы не дублировали его туда. 
+            // Поиск по email возможен только через Edge Function или если мы будем сохранять email в profiles при регистрации.
+            // В рамках ограничений ищем по ID или показываем всех).
+            if (searchQuery) {
+                query = query.eq('id', searchQuery);
+            }
+
+            const { data: profiles, error } = await query;
+
+            if (error) {
+                alert('Ошибка загрузки пользователей: ' + error.message);
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            
+            profiles.forEach(profile => {
+                const isBanned = profile.is_banned;
+                const row = document.createElement('tr');
+                
+                // Кнопка "Войти как" зависит от роли
+                let impersonateBtn = '';
+                if (profile.role === 'landlord') {
+                    impersonateBtn = `<a href="landlord.html?impersonate_id=${profile.id}" target="_blank" class="text-blue-400 hover:text-blue-300 mr-3">Войти как (Landlord)</a>`;
+                } else if (profile.role === 'tenant') {
+                    impersonateBtn = `<a href="tenant.html?impersonate_id=${profile.id}" target="_blank" class="text-green-400 hover:text-green-300 mr-3">Войти как (Tenant)</a>`;
+                }
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400">${profile.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(profile.role)}">
+                            ${profile.role}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        ${isBanned ? '<span class="text-red-500 font-bold">ЗАБАНЕН</span>' : '<span class="text-green-500">Активен</span>'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${impersonateBtn}
+                        <button onclick="toggleBan('${profile.id}', ${isBanned})" class="${isBanned ? 'text-green-500 hover:text-green-400' : 'text-red-500 hover:text-red-400'}">
+                            ${isBanned ? 'Разбанить' : 'Забанить'}
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Загрузка сообщений
+        async function loadMessages() {
+            const tableBody = document.getElementById('messagesTableBody');
+            
+            const { data: messages, error } = await window.sb.client
+                .from('messages')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50); // Последние 50
+
+            if (error) {
+                console.error('Ошибка загрузки сообщений', error);
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            messages.forEach(msg => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-2 text-gray-400">${new Date(msg.created_at).toLocaleString()}</td>
+                    <td class="px-4 py-2 text-white">${msg.tenant_email || 'Неизвестно'}</td>
+                    <td class="px-4 py-2 text-white truncate max-w-xs" title="${msg.message}">${msg.message}</td>
+                    <td class="px-4 py-2">
+                        ${msg.is_from_landlord 
+                            ? '<span class="text-blue-400">Владелец -> Арендатор</span>' 
+                            : '<span class="text-green-400">Арендатор -> Владелец</span>'}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Тоггл бана
+        async function toggleBan(userId, currentStatus) {
+            if (!confirm(`Вы уверены, что хотите ${currentStatus ? 'разбанить' : 'забанить'} пользователя?`)) return;
+
+            const { error } = await window.sb.client
+                .from('profiles')
+                .update({ is_banned: !currentStatus })
+                .eq('id', userId);
+
+            if (error) {
+                alert('Ошибка: ' + error.message);
+            } else {
+                loadUsers(); // Перезагрузить таблицу
+            }
+        }
+
+        function getRoleColor(role) {
+            switch(role) {
+                case 'admin': return 'bg-red-100 text-red-800';
+                case 'landlord': return 'bg-blue-100 text-blue-800';
+                case 'tenant': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+    </script>
+</body>
+</html>
