@@ -1,419 +1,290 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Landlord Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабинет Владельца | Аренда Жилья</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen font-sans">
 
-  <nav class="bg-white shadow mb-8 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex items-center gap-4">
-          <h1 class="text-xl font-bold text-slate-800">Landlord Dashboard</h1>
-          <span class="text-slate-300">|</span>
-          <a href="tenant.html" class="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition font-medium">
-            <span>🔍 Find Home (Tenant View)</span>
-          </a>
-        </div>
-        <div class="flex items-center gap-4">
-          <span id="userEmail" class="text-sm text-slate-600 hidden sm:block"></span>
-          <button onclick="logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Log out</button>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-slate-800">My Listings</h2>
-      <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm">+ Create Listing</button>
+    <div id="adminBanner" class="hidden bg-red-600 text-white text-center py-2 font-bold px-4">
+        РЕЖИМ АДМИНИСТРАТОРА: Вы просматриваете кабинет пользователя <span id="impersonatedUserId"></span>
+        <a href="admin.html" class="ml-4 underline text-white">Вернуться в админку</a>
     </div>
 
-    <div class="mb-8 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-      <h3 class="font-bold text-slate-700 mb-2 flex items-center gap-2">
-        Recent Messages
-        <button onclick="loadInboxPreview()" class="text-xs text-emerald-600 font-normal hover:underline">Refresh</button>
-      </h3>
-      <div id="inboxPreview" class="text-sm text-slate-500 space-y-2 max-h-40 overflow-y-auto">
-        Loading messages...
-      </div>
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-blue-600">Landlord Dashboard</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userEmail" class="text-gray-700"></span>
+                    <button onclick="window.sb.logout()" class="text-gray-500 hover:text-gray-700">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="flex justify-end mb-6">
+            <button onclick="openModal('createModal')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition">
+                + Добавить объявление
+            </button>
+        </div>
+
+        <div id="listingsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-gray-500 col-span-full text-center py-10">Загрузка ваших объектов...</p>
+        </div>
+
+        <div class="mt-12 bg-white shadow rounded-lg p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Входящие сообщения</h2>
+            <div id="messagesContainer" class="space-y-4">
+                <p class="text-gray-500 text-sm">Нет новых сообщений.</p>
+            </div>
+        </div>
     </div>
 
-    <div id="listingsContainer" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div class="col-span-full text-center py-10 text-slate-500">Loading listings...</div>
+    <div id="createModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Новый объект недвижимости</h3>
+                <button onclick="closeModal('createModal')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            
+            <form id="createListingForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Название</label>
+                    <input type="text" name="title" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Город</label>
+                        <input type="text" name="city" required class="mt-1 block w-full rounded-md border-gray-300 border p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Цена (месяц)</label>
+                        <input type="number" name="price_per_month" required class="mt-1 block w-full rounded-md border-gray-300 border p-2">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Описание</label>
+                    <textarea name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 border p-2"></textarea>
+                </div>
+                
+                <div>
+                     <label class="block text-sm font-medium text-gray-700">Фото (Загрузите файл)</label>
+                     <input type="file" id="photoInput" accept="image/*" class="mt-1 block w-full">
+                     <p id="uploadStatus" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Сохранить</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-  </div>
+    <script>
+        let currentUser = null; // Реальный юзер (сессия)
+        let effectiveUserId = null; // Чьи данные мы смотрим
+        let isAdminMode = false;
 
-  <div id="listingModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl w-full max-w-2xl relative shadow-2xl flex flex-col max-h-[90vh]">
-      
-      <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
-        <h3 id="modalTitle" class="font-bold text-slate-800">Edit Listing</h3>
-        <button onclick="closeModal()" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
-      </div>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Проверяем реальную сессию
+            const profile = await window.sb.requireAuth(['landlord', 'admin']);
+            if (!profile) return;
+            currentUser = profile;
 
-      <div class="p-6 overflow-y-auto space-y-4">
-        <input type="hidden" id="inpId" />
+            // 2. Логика имперсонации
+            const params = new URLSearchParams(window.location.search);
+            const impersonateId = params.get('impersonate_id');
 
-        <div>
-           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-           <input id="inpTitle" type="text" placeholder="e.g. Sunny Apartment" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-        </div>
+            if (profile.role === 'admin' && impersonateId) {
+                isAdminMode = true;
+                effectiveUserId = impersonateId;
+                
+                // UI для админа
+                const banner = document.getElementById('adminBanner');
+                banner.classList.remove('hidden');
+                document.getElementById('impersonatedUserId').textContent = impersonateId;
+                
+                // Для создания объявлений от чужого имени скрываем форму или меняем логику
+                // В этом примере админ только СМОТРИТ, но можно разрешить и создавать
+            } else {
+                effectiveUserId = profile.id;
+            }
 
-        <div class="grid grid-cols-2 gap-4">
-           <div>
-             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">City</label>
-             <input id="inpCity" type="text" placeholder="City" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-           </div>
-           <div>
-             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Price ($/mo)</label>
-             <input id="inpPrice" type="number" placeholder="0" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-           </div>
-           <div class="col-span-2">
-             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deposit Amount ($)</label>
-             <input id="inpDeposit" type="number" placeholder="0 (Required by DB)" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-           </div>
-        </div>
+            // UI Email
+            const { data: { user } } = await window.sb.client.auth.getUser();
+            document.getElementById('userEmail').textContent = user.email + (isAdminMode ? ' (Admin)' : '');
 
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-          <textarea id="inpDesc" rows="3" placeholder="Description" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
-        </div>
-        
-        <div class="flex flex-wrap gap-4 border-t pt-3">
-           <label class="flex items-center gap-2 cursor-pointer"><input id="inpActive" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Active</span></label>
-           <label class="flex items-center gap-2 cursor-pointer"><input id="inpWifi" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Wi-Fi</span></label>
-           <label class="flex items-center gap-2 cursor-pointer"><input id="inpPets" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Pets</span></label>
-           <label class="flex items-center gap-2 cursor-pointer"><input id="inpFurnished" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Furnished</span></label>
-        </div>
+            // 3. Загрузка данных (используем effectiveUserId)
+            loadListings();
+            loadMessages();
+            
+            // Обработчик формы
+            document.getElementById('createListingForm').addEventListener('submit', handleCreateListing);
+        });
 
-        <div class="border-t pt-3">
-          <p class="text-xs font-bold text-slate-500 mb-2">PHOTOS</p>
-          <div id="photosAlert" class="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-2 hidden">
-             Please save the listing first. Then you can upload photos here.
-          </div>
-          <div id="photosContainer" class="grid grid-cols-4 gap-2">
-             </div>
-        </div>
+        // Загрузка объявлений
+        async function loadListings() {
+            const container = document.getElementById('listingsContainer');
+            
+            // Если мы админ, мы можем делать select по owner_id даже если это не наш ID (благодаря RLS)
+            const { data, error } = await window.sb.client
+                .from('listing')
+                .select('*')
+                .eq('owner_id', effectiveUserId)
+                .order('created_at', { ascending: false });
 
-        <p id="modalStatus" class="text-center text-sm hidden font-bold"></p>
-      </div>
+            if (error) {
+                container.innerHTML = `<p class="text-red-500">Ошибка: ${error.message}</p>`;
+                return;
+            }
 
-      <div class="px-6 py-4 border-t bg-slate-50 rounded-b-2xl flex justify-end gap-2">
-        <button onclick="closeModal()" class="px-4 py-2 border rounded-xl hover:bg-slate-100 text-sm font-semibold">Cancel</button>
-        <button onclick="saveListing()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700">Save Listing</button>
-      </div>
-    </div>
-  </div>
+            if (data.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-10 bg-white rounded shadow">
+                    <p class="text-gray-500">У пользователя нет активных объявлений</p>
+                </div>`;
+                return;
+            }
 
-  <input type="file" id="hiddenFileInput" class="hidden" accept="image/*">
-
-<script>
-  let currentUser = null;
-  const BUCKET = 'listing-images';
-
-  window.addEventListener('load', async () => {
-    if(!window.sb) {
-        console.error("Supabase not found");
-        return;
-    }
-    
-    // Auth Check
-    const user = await requireAuth();
-    if(user) {
-        currentUser = user;
-        document.getElementById('userEmail').textContent = user.email;
-        
-        // Role Check
-        const prof = await getCurrentProfile();
-        if(prof?.role !== 'landlord') {
-            window.location.href = 'tenant.html';
-            return;
+            container.innerHTML = data.map(item => `
+                <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+                    <img src="${item.main_photo_url || 'https://via.placeholder.com/400x200?text=No+Photo'}" class="h-48 w-full object-cover">
+                    <div class="p-4 flex-1">
+                        <h3 class="font-bold text-lg mb-1">${item.title}</h3>
+                        <p class="text-gray-600 text-sm mb-2">${item.city}</p>
+                        <p class="text-blue-600 font-bold">${item.price_per_month} ₽ / мес</p>
+                        <div class="mt-3 flex gap-2">
+                             <span class="text-xs px-2 py-1 bg-gray-100 rounded">${item.is_active ? 'Активно' : 'Скрыто'}</span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-gray-50 border-t flex justify-between">
+                         <button onclick="deleteListing('${item.id}')" class="text-red-500 text-sm hover:underline">Удалить</button>
+                         <a href="listing-details.html?id=${item.id}" class="text-blue-500 text-sm hover:underline">Просмотр</a>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        loadListings();
-        loadInboxPreview();
-    }
-  });
+        // Загрузка сообщений
+        async function loadMessages() {
+            const container = document.getElementById('messagesContainer');
 
-  // --- LISTINGS ---
-  async function loadListings() {
-    const container = document.getElementById('listingsContainer');
-    container.innerHTML = '<p class="text-slate-500 col-span-full text-center">Loading...</p>';
+            // Получаем список ID объявлений этого юзера
+            const { data: listings } = await window.sb.client
+                .from('listing')
+                .select('id, title')
+                .eq('owner_id', effectiveUserId);
 
-    const { data, error } = await window.sb
-      .from('listing')
-      .select('*')
-      .eq('owner_id', currentUser.id)
-      .order('created_at', {ascending: false});
+            if (!listings || listings.length === 0) return;
 
-    if(error) {
-       container.innerHTML = `<p class="text-red-500 col-span-full">Error: ${error.message}</p>`;
-       return;
-    }
-    
-    container.innerHTML = '';
-    if(!data.length) {
-       container.innerHTML = '<p class="text-slate-400 col-span-full text-center py-10">No listings found. Create one!</p>';
-       return;
-    }
+            const listingIds = listings.map(l => l.id);
 
-    data.forEach(item => {
-      const card = document.createElement('div');
-      card.className = "bg-white border rounded-xl overflow-hidden hover:shadow-lg transition flex flex-col";
-      
-      const img = item.main_photo_url || 'https://via.placeholder.com/300x200?text=No+Photo';
-      
-      card.innerHTML = `
-        <div class="h-40 bg-slate-200 relative group cursor-pointer" onclick="openModalById('${item.id}')">
-          <img src="${img}" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center text-white font-bold">Edit Listing</div>
-        </div>
-        <div class="p-3 flex flex-col flex-1">
-          <div class="font-bold truncate text-slate-800">${item.title}</div>
-          <div class="text-xs text-slate-500 mb-2">$${item.price_per_month} • ${item.city}</div>
-          <div class="mt-auto flex gap-2">
-             <button onclick="window.location.href='listing-details.html?id=${item.id}'" class="flex-1 py-1 border rounded text-xs hover:bg-slate-50">View Page & Chat</button>
-             <button onclick="deleteListing('${item.id}')" class="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Delete</button>
-          </div>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-    
-    // Global helper for onclick
-    window.openModalById = (id) => {
-        const item = data.find(i => i.id === id);
-        openModal(item);
-    }
-  }
+            // Получаем сообщения для этих объявлений
+            const { data: messages, error } = await window.sb.client
+                .from('messages')
+                .select('*')
+                .in('listing_id', listingIds)
+                .order('created_at', { ascending: false });
 
-  async function deleteListing(id) {
-      if(!confirm("Delete this listing?")) return;
-      await window.sb.from('listing').delete().eq('id', id);
-      loadListings();
-  }
+            if (error) {
+                console.error(error);
+                return;
+            }
 
-  // --- INBOX ---
-  async function loadInboxPreview() {
-      const box = document.getElementById('inboxPreview');
-      box.textContent = "Loading...";
-      
-      // Грузим уникальные диалоги (упрощенно: последние сообщения)
-      const { data, error } = await window.sb
-        .from('messages')
-        .select('*, listing(title)')
-        .eq('is_read_by_landlord', false)
-        .order('created_at', {ascending: false})
-        .limit(5);
+            container.innerHTML = messages.length ? '' : '<p>Нет сообщений</p>';
 
-      if(error) { box.textContent = "Error loading messages."; return; }
-      
-      box.innerHTML = '';
-      if(!data.length) { box.textContent = "No new messages."; return; }
+            messages.forEach(msg => {
+                const listingTitle = listings.find(l => l.id === msg.listing_id)?.title || 'Unknown Listing';
+                const div = document.createElement('div');
+                div.className = `p-4 rounded border ${msg.is_read_by_landlord ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'}`;
+                div.innerHTML = `
+                    <div class="flex justify-between mb-1">
+                        <span class="font-bold text-sm text-gray-800">${msg.tenant_email}</span>
+                        <span class="text-xs text-gray-500">${new Date(msg.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Объект: ${listingTitle}</p>
+                    <p class="text-gray-700">${msg.message}</p>
+                `;
+                container.appendChild(div);
+            });
+        }
 
-      data.forEach(m => {
-          const div = document.createElement('div');
-          div.className = "p-2 bg-slate-50 border rounded flex justify-between cursor-pointer hover:bg-slate-100";
-          div.onclick = () => window.location.href = `listing-details.html?id=${m.listing_id}&tenant_email=${m.tenant_email || ''}`;
-          
-          div.innerHTML = `
-             <div>
-               <div class="font-bold text-xs text-emerald-700">${m.listing?.title || 'Unknown Listing'}</div>
-               <div class="text-xs text-slate-600 truncate w-48">${m.message}</div>
-             </div>
-             <div class="text-[10px] text-slate-400 self-center">From: ${m.tenant_email || 'Guest'}</div>
-          `;
-          box.appendChild(div);
-      });
-  }
+        // Логика создания объявления (только демо)
+        async function handleCreateListing(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const fileInput = document.getElementById('photoInput');
+            let photoUrl = null;
 
-  // --- MODAL & SAVE ---
-  const modal = document.getElementById('listingModal');
-  const modalStatus = document.getElementById('modalStatus');
-  const photosAlert = document.getElementById('photosAlert');
+            // Загрузка фото в Supabase Storage
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${effectiveUserId}/${Date.now()}.${fileExt}`;
 
-  window.openModal = function(item = null) {
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      modalStatus.textContent = '';
-      modalStatus.classList.add('hidden');
+                document.getElementById('uploadStatus').textContent = 'Загрузка фото...';
+                
+                const { data, error } = await window.sb.client.storage
+                    .from('listing-images')
+                    .upload(fileName, file);
 
-      if(item) {
-          // EDIT MODE
-          document.getElementById('modalTitle').textContent = "Edit Listing";
-          document.getElementById('inpId').value = item.id;
-          document.getElementById('inpTitle').value = item.title;
-          document.getElementById('inpCity').value = item.city;
-          document.getElementById('inpPrice').value = item.price_per_month;
-          document.getElementById('inpDeposit').value = item.deposit_amount || 0; // Загружаем депозит
-          document.getElementById('inpDesc').value = item.description;
-          document.getElementById('inpActive').checked = item.is_active;
-          document.getElementById('inpWifi').checked = item.has_wifi;
-          document.getElementById('inpPets').checked = item.allow_pets;
-          document.getElementById('inpFurnished').checked = item.is_furnished;
-          
-          photosAlert.classList.add('hidden');
-          renderPhotos(item);
-      } else {
-          // CREATE MODE
-          document.getElementById('modalTitle').textContent = "New Listing";
-          document.getElementById('inpId').value = '';
-          document.getElementById('inpTitle').value = '';
-          document.getElementById('inpCity').value = '';
-          document.getElementById('inpPrice').value = '';
-          document.getElementById('inpDeposit').value = '';
-          document.getElementById('inpDesc').value = '';
-          document.getElementById('photosContainer').innerHTML = '';
-          
-          photosAlert.classList.remove('hidden'); // Показываем "Сначала сохрани"
-      }
-  }
+                if (error) {
+                    alert('Ошибка загрузки фото: ' + error.message);
+                    return;
+                }
 
-  window.closeModal = () => {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-  }
+                // Получаем Public URL
+                const { data: { publicUrl } } = window.sb.client.storage
+                    .from('listing-images')
+                    .getPublicUrl(fileName);
+                
+                photoUrl = publicUrl;
+                document.getElementById('uploadStatus').textContent = 'Фото загружено!';
+            }
 
-  window.saveListing = async function() {
-      const id = document.getElementById('inpId').value;
-      const title = document.getElementById('inpTitle').value;
-      const price = document.getElementById('inpPrice').value;
-      const deposit = document.getElementById('inpDeposit').value; // Берем депозит
+            // Вставка в БД
+            const insertData = {
+                owner_id: effectiveUserId, // Важно: используем ID того, от чьего имени действуем
+                title: formData.get('title'),
+                city: formData.get('city'),
+                price_per_month: formData.get('price_per_month'),
+                description: formData.get('description'),
+                main_photo_url: photoUrl,
+                is_active: true
+            };
 
-      if(!title || !price) {
-          alert("Title and Price are required.");
-          return;
-      }
+            const { error } = await window.sb.client
+                .from('listing')
+                .insert([insertData]);
 
-      modalStatus.textContent = "Saving...";
-      modalStatus.className = "text-center text-sm text-slate-500 block";
+            if (error) {
+                alert('Ошибка создания: ' + error.message);
+            } else {
+                alert('Объявление создано!');
+                closeModal('createModal');
+                loadListings();
+            }
+        }
 
-      const payload = {
-          owner_id: currentUser.id,
-          title: title,
-          city: document.getElementById('inpCity').value,
-          price_per_month: parseInt(price),
-          deposit_amount: deposit ? parseInt(deposit) : 0, // Если пусто, шлем 0
-          description: document.getElementById('inpDesc').value,
-          is_active: document.getElementById('inpActive').checked,
-          has_wifi: document.getElementById('inpWifi').checked,
-          allow_pets: document.getElementById('inpPets').checked,
-          is_furnished: document.getElementById('inpFurnished').checked
-      };
+        // Хелперы модалки
+        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
-      let result;
-      if(id) {
-          result = await window.sb.from('listing').update(payload).eq('id', id).select().single();
-      } else {
-          result = await window.sb.from('listing').insert(payload).select().single();
-      }
+        // Удаление
+        window.deleteListing = async (id) => {
+            if(!confirm('Удалить объявление?')) return;
+            const { error } = await window.sb.client.from('listing').delete().eq('id', id);
+            if(error) alert(error.message);
+            else loadListings();
+        };
 
-      if(result.error) {
-          modalStatus.textContent = "Error: " + result.error.message;
-          modalStatus.className = "text-center text-sm text-red-600 block";
-      } else {
-          modalStatus.textContent = "Saved successfully!";
-          modalStatus.className = "text-center text-sm text-emerald-600 block";
-          
-          // Если создали новое, переключаем в режим редактирования, чтобы дать загрузить фото
-          if(!id) {
-              document.getElementById('inpId').value = result.data.id;
-              photosAlert.classList.add('hidden');
-              renderPhotos(result.data);
-              loadListings(); // Обновляем фон
-          } else {
-              loadListings();
-              setTimeout(closeModal, 1000);
-          }
-      }
-  }
-
-  // --- PHOTOS ---
-  function renderPhotos(item) {
-      const c = document.getElementById('photosContainer');
-      c.innerHTML = '';
-      
-      const fields = ['main_photo_url', 'photo2_url', 'photo3_url', 'photo4_url'];
-      fields.forEach(key => {
-          const div = document.createElement('div');
-          div.className = "h-20 border rounded bg-slate-50 flex items-center justify-center relative overflow-hidden group";
-          
-          if(item[key]) {
-              div.innerHTML = `
-                 <img src="${item[key]}" class="w-full h-full object-cover">
-                 <button onclick="deletePhoto('${key}', '${item.id}')" class="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">×</button>
-              `;
-          } else {
-              div.innerHTML = `<span class="text-2xl text-slate-300">+</span>`;
-              div.className += " cursor-pointer hover:border-emerald-500";
-              div.onclick = () => uploadPhotoClick(key, item.id);
-          }
-          c.appendChild(div);
-      });
-  }
-
-  // Скрытый инпут для файлов
-  let uploadKey = null;
-  let uploadId = null;
-  const fileInput = document.getElementById('hiddenFileInput');
-
-  function uploadPhotoClick(key, id) {
-      uploadKey = key;
-      uploadId = id;
-      fileInput.click();
-  }
-
-  fileInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if(!file || !uploadKey || !uploadId) return;
-      
-      modalStatus.textContent = "Uploading photo...";
-      modalStatus.classList.remove('hidden');
-
-      try {
-          // 1. Upload
-          const ext = file.name.split('.').pop();
-          const path = `${currentUser.id}/${uploadId}/${Date.now()}.${ext}`;
-          
-          const { error: upErr } = await window.sb.storage.from(BUCKET).upload(path, file);
-          if(upErr) throw upErr;
-
-          // 2. Get URL
-          const { data: { publicUrl } } = window.sb.storage.from(BUCKET).getPublicUrl(path);
-
-          // 3. Update DB
-          const { error: dbErr } = await window.sb.from('listing').update({ [uploadKey]: publicUrl }).eq('id', uploadId);
-          if(dbErr) throw dbErr;
-
-          // 4. Refresh UI
-          const { data } = await window.sb.from('listing').select('*').eq('id', uploadId).single();
-          renderPhotos(data);
-          modalStatus.textContent = "Photo uploaded.";
-          loadListings();
-
-      } catch(err) {
-          console.error(err);
-          modalStatus.textContent = "Upload failed: " + err.message;
-          modalStatus.className = "text-center text-sm text-red-600 block";
-      }
-      fileInput.value = ''; // reset
-  }
-
-  window.deletePhoto = async (key, id) => {
-      if(!confirm("Remove photo?")) return;
-      await window.sb.from('listing').update({[key]: null}).eq('id', id);
-      const { data } = await window.sb.from('listing').select('*').eq('id', id).single();
-      renderPhotos(data);
-      loadListings();
-  }
-
-</script>
+    </script>
 </body>
 </html>
