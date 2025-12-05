@@ -5,6 +5,7 @@
   <title>Rental marketplace – Home</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
   <div class="max-w-6xl mx-auto py-8 px-4">
@@ -135,11 +136,6 @@
   </div>
 
 <script>
-  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
   const loginEmailEl = document.getElementById("loginEmail");
   const loginPasswordEl = document.getElementById("loginPassword");
   const loginBtnEl = document.getElementById("loginBtn");
@@ -164,7 +160,6 @@
   // ---------- AUTH + LOGIN ЛОГИКА ----------
 
   async function initAuthAndUI() {
-    // если юзер уже залогинен – сразу в дашборд, как раньше
     const { data, error } = await supabase.auth.getUser();
     if (!error && data && data.user) {
       const user = data.user;
@@ -175,7 +170,6 @@
         .maybeSingle();
 
       if (!pErr && profile && profile.role) {
-        // автопереход как и раньше – UX для живых, SEO не страдает, потому что боты не логинятся
         if (profile.role === "landlord") {
           window.location.href = "landlord.html";
           return;
@@ -185,7 +179,6 @@
         }
       }
 
-      // На всякий случай fallback: показать состояние "залогинен"
       showLoggedInUI(user, profile ? profile.role : null);
     } else {
       showLoggedOutUI();
@@ -284,8 +277,7 @@
   async function onLogout() {
     logoutBtn.disabled = true;
     logoutBtn.textContent = "Logging out...";
-    await supabase.auth.signOut();
-    window.location.href = "index.html";
+    await logout("index.html");
   }
 
   // ---------- PUBLIC SEARCH / LISTINGS ----------
