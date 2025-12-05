@@ -9,14 +9,21 @@
 </head>
 <body class="bg-slate-100 min-h-screen">
 
-  <nav class="bg-white shadow mb-8">
+  <nav class="bg-white shadow mb-8 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
-        <div class="flex items-center">
-          <h1 class="text-xl font-bold text-slate-800">Landlord Dashboard</h1>
-        </div>
+        
         <div class="flex items-center gap-4">
-          <span id="userEmailDisplay" class="text-sm text-slate-600"></span>
+          <h1 class="text-xl font-bold text-slate-800">Landlord Dashboard</h1>
+          <span class="text-slate-300">|</span>
+          <a href="tenant.html" class="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition group" title="Switch to search mode">
+            <span class="group-hover:underline">Switch to Search (Tenant View)</span>
+            <span>→</span>
+          </a>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <span id="userEmailDisplay" class="text-sm text-slate-600 hidden sm:block"></span>
           <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-800 font-medium">
             Log out
           </button>
@@ -30,7 +37,7 @@
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-slate-800">My Listings</h2>
       <button onclick="openModal()" 
-        class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition">
+        class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm">
         + Create New Listing
       </button>
     </div>
@@ -42,21 +49,21 @@
   </div>
 
   <div id="listingModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center overflow-y-auto z-50 p-4">
-    <div class="bg-white rounded-2xl w-full max-w-3xl my-8 relative shadow-2xl">
+    <div class="bg-white rounded-2xl w-full max-w-3xl my-8 relative shadow-2xl flex flex-col max-h-[90vh]">
       
-      <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="px-6 py-4 border-b flex justify-between items-center bg-white rounded-t-2xl">
         <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Edit Listing</h3>
         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
 
-      <div class="p-6 space-y-6">
+      <div class="p-6 space-y-6 overflow-y-auto">
         
         <input type="hidden" id="listingId" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-slate-700 mb-1">Title</label>
-            <input id="inpTitle" type="text" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Cozy Studio in Downtown" />
+            <input id="inpTitle" type="text" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Cozy Studio" />
           </div>
 
           <div>
@@ -65,7 +72,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Monthly Price ($)</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Price ($/mo)</label>
             <input id="inpPrice" type="number" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
           </div>
 
@@ -76,33 +83,31 @@
         </div>
 
         <div class="flex flex-wrap gap-4 pt-2 border-t">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input id="inpActive" type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input id="inpActive" type="checkbox" class="accent-emerald-600 w-4 h-4" />
             <span class="text-sm text-slate-700">Active (Visible)</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input id="inpWifi" type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
-            <span class="text-sm text-slate-700">Has Wi-Fi</span>
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input id="inpWifi" type="checkbox" class="accent-emerald-600 w-4 h-4" />
+            <span class="text-sm text-slate-700">Wi-Fi</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input id="inpPets" type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input id="inpPets" type="checkbox" class="accent-emerald-600 w-4 h-4" />
             <span class="text-sm text-slate-700">Pets Allowed</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input id="inpFurnished" type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input id="inpFurnished" type="checkbox" class="accent-emerald-600 w-4 h-4" />
             <span class="text-sm text-slate-700">Furnished</span>
           </label>
         </div>
 
         <div class="pt-4 border-t">
           <h4 class="text-md font-bold text-slate-800 mb-3">Photos</h4>
-          <p class="text-xs text-slate-500 mb-3">Upload images directly. Supported formats: JPG, PNG. Max 2MB.</p>
-          
           <div id="photosContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            </div>
+             </div>
         </div>
 
-        <div id="modalStatus" class="text-sm text-center hidden"></div>
+        <div id="modalStatus" class="text-sm text-center hidden font-medium"></div>
 
       </div>
 
@@ -114,11 +119,11 @@
   </div>
 
 <script>
-  // --- CONFIG & STATE ---
+  // --- CONFIG ---
   const BUCKET_NAME = 'listing-images'; 
   let currentUser = null;
   
-  // DOM Elements
+  // DOM
   const listingsContainer = document.getElementById('listingsContainer');
   const modal = document.getElementById('listingModal');
   const modalStatus = document.getElementById('modalStatus');
@@ -137,20 +142,16 @@
 
   // --- INIT ---
   window.addEventListener('load', async () => {
-    // 1. Check Auth
     currentUser = await requireAuth('index.html');
     if(currentUser) {
       userEmailDisplay.textContent = currentUser.email;
       
-      // 2. Check Role (Strict Landlord)
       const profile = await getCurrentProfile();
       if(profile?.role !== 'landlord') {
         alert("Access denied. Landlords only.");
         window.location.href = 'index.html';
         return;
       }
-
-      // 3. Load Data
       loadListings();
     }
   });
@@ -168,7 +169,6 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error(error);
       listingsContainer.innerHTML = `<div class="col-span-full text-red-500">Error: ${error.message}</div>`;
       return;
     }
@@ -191,13 +191,13 @@
     listings.forEach(item => {
       const card = document.createElement('div');
       card.className = "bg-white border rounded-2xl overflow-hidden hover:shadow-lg transition flex flex-col";
-      
       const thumb = item.main_photo_url || "https://via.placeholder.com/400x300?text=No+Photo";
       
       card.innerHTML = `
-        <div class="h-48 bg-slate-200 relative">
-          <img src="${thumb}" class="w-full h-full object-cover" alt="Listing" />
+        <div class="h-48 bg-slate-200 relative group cursor-pointer" onclick="openModalById('${item.id}')">
+          <img src="${thumb}" class="w-full h-full object-cover" />
           ${!item.is_active ? '<div class="absolute top-2 right-2 bg-slate-800 text-white text-xs px-2 py-1 rounded">Inactive</div>' : ''}
+          <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center text-white font-semibold">Edit</div>
         </div>
         <div class="p-4 flex-1 flex flex-col">
           <div class="flex justify-between items-start mb-2">
@@ -207,25 +207,29 @@
           <p class="text-sm text-slate-500 mb-4">${item.city || 'Unknown City'}</p>
           
           <div class="mt-auto flex gap-2">
-            <button class="edit-btn flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition">
-              Edit
-            </button>
+            <a href="listing-details.html?id=${item.id}" class="flex-1 text-center px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition">
+              View Page
+            </a>
             <button class="delete-btn px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition" title="Delete">
               🗑
             </button>
           </div>
         </div>
       `;
-
-      // Handlers
-      card.querySelector('.edit-btn').onclick = () => openModal(item);
-      card.querySelector('.delete-btn').onclick = () => deleteListing(item.id);
+      // We attach the delete handler explicitly to avoid string escape hell
+      card.querySelector('.delete-btn').onclick = (e) => {
+          e.stopPropagation();
+          deleteListing(item.id);
+      };
+      
+      // Helper for edit click
+      window.openModalById = () => openModal(item);
 
       listingsContainer.appendChild(card);
     });
   }
 
-  // --- CRUD LOGIC ---
+  // --- CRUD ---
 
   function resetModal() {
     inpId.value = '';
@@ -239,7 +243,6 @@
     inpFurnished.checked = false;
     
     document.getElementById('photosContainer').innerHTML = '<div class="col-span-full text-sm text-slate-400 text-center py-4">Save listing first to upload photos.</div>';
-    
     modalStatus.classList.add('hidden');
     document.getElementById('modalTitle').textContent = "New Listing";
   }
@@ -260,8 +263,6 @@
       inpWifi.checked = listing.has_wifi;
       inpPets.checked = listing.allow_pets;
       inpFurnished.checked = listing.is_furnished;
-
-      // Render Photo Slots immediately if editing
       renderPhotoSlots(listing);
     }
   };
@@ -274,7 +275,7 @@
   async function saveListing() {
     const id = inpId.value;
     const payload = {
-      owner_id: currentUser.id, // Ensure ownership
+      owner_id: currentUser.id,
       title: inpTitle.value.trim(),
       city: inpCity.value.trim(),
       price_per_month: inpPrice.value ? parseInt(inpPrice.value) : 0,
@@ -294,10 +295,8 @@
     
     let result;
     if(id) {
-      // Update
       result = await supabase.from('listing').update(payload).eq('id', id).select().single();
     } else {
-      // Create
       result = await supabase.from('listing').insert(payload).select().single();
     }
 
@@ -307,13 +306,12 @@
       showModalStatus(error.message, true);
     } else {
       showModalStatus('Saved successfully!', false);
-      // If it was a new listing, switch to "Edit" mode so they can upload photos immediately
       if(!id && data) {
         inpId.value = data.id;
         document.getElementById('modalTitle').textContent = "Edit Listing (Add Photos)";
         renderPhotoSlots(data);
-        showModalStatus('Listing created. Now you can upload photos.', false);
-        loadListings(); // Refresh bg list
+        showModalStatus('Created! You can now add photos.', false);
+        loadListings();
       } else {
         closeModal();
         loadListings();
@@ -322,12 +320,7 @@
   }
 
   async function deleteListing(id) {
-    if(!confirm('Are you sure? This will delete the listing and all photos.')) return;
-    
-    // Note: Ideally, we should also delete files from Storage here, 
-    // but for MVP we rely on RLS or manual cleanup, or we implement a loop to delete photos first.
-    // Let's keep it simple: just delete the DB row. 
-    
+    if(!confirm('Delete this listing?')) return;
     const { error } = await supabase.from('listing').delete().eq('id', id);
     if(error) alert(error.message);
     else loadListings();
@@ -339,10 +332,9 @@
     modalStatus.classList.remove('hidden');
   }
 
-  // --- PHOTO LOGIC (The New Part) ---
-
+  // --- PHOTO UPLOAD LOGIC ---
   const PHOTO_FIELDS = [
-    { key: 'main_photo_url', label: 'Main Photo' },
+    { key: 'main_photo_url', label: 'Main' },
     { key: 'photo2_url', label: 'Photo 2' },
     { key: 'photo3_url', label: 'Photo 3' },
     { key: 'photo4_url', label: 'Photo 4' }
@@ -354,35 +346,30 @@
 
     PHOTO_FIELDS.forEach((field, idx) => {
       const currentUrl = listing[field.key];
-      const slotId = `slot-${idx}`;
-      
       const div = document.createElement('div');
-      div.className = "relative border rounded-xl h-32 bg-slate-50 flex items-center justify-center overflow-hidden group";
+      div.className = "relative border rounded-xl h-24 bg-slate-50 flex items-center justify-center overflow-hidden group";
       
       if(currentUrl) {
-        // Show Image
         div.innerHTML = `
           <img src="${currentUrl}" class="w-full h-full object-cover" />
-          <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center gap-2 transition">
-             <button onclick="triggerUpload('${field.key}')" class="text-white text-xs bg-slate-700/80 px-2 py-1 rounded hover:bg-slate-600">Change</button>
-             <button onclick="deletePhoto('${field.key}', '${currentUrl}')" class="text-white text-xs bg-red-600/80 px-2 py-1 rounded hover:bg-red-500">Delete</button>
+          <div class="absolute inset-0 bg-black/50 hidden group-hover:flex flex-col items-center justify-center gap-1 transition">
+             <button onclick="triggerUpload('${field.key}')" class="text-xs text-white underline">Change</button>
+             <button onclick="deletePhoto('${field.key}', '${currentUrl}')" class="text-xs text-red-300 underline">Delete</button>
           </div>
         `;
       } else {
-        // Show Upload Placeholder
         div.innerHTML = `
-          <button onclick="triggerUpload('${field.key}')" class="flex flex-col items-center text-slate-400 hover:text-emerald-600 transition p-2 w-full h-full justify-center">
-            <span class="text-2xl">+</span>
-            <span class="text-xs font-medium">${field.label}</span>
+          <button onclick="triggerUpload('${field.key}')" class="flex flex-col items-center text-slate-400 hover:text-emerald-600 transition w-full h-full justify-center">
+            <span class="text-xl">+</span>
+            <span class="text-[10px] font-medium uppercase">${field.label}</span>
           </button>
         `;
       }
-
       container.appendChild(div);
     });
   }
 
-  // Hidden global input for file selection
+  // Upload helpers
   let currentUploadField = null;
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -393,9 +380,8 @@
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if(!file || !currentUploadField) return;
-    
     await handleUpload(file, currentUploadField);
-    fileInput.value = ''; // reset
+    fileInput.value = ''; 
   });
 
   window.triggerUpload = function(fieldKey) {
@@ -405,47 +391,24 @@
 
   async function handleUpload(file, fieldKey) {
     const listingId = inpId.value;
-    if(!listingId) return;
-
-    // 1. UI Loading State
-    showModalStatus(`Uploading to ${fieldKey}...`, false);
-
+    showModalStatus(`Uploading...`, false);
     try {
-      // 2. Prepare Path: public/userId/listingId/timestamp_filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `public/${currentUser.id}/${listingId}/${fileName}`;
+      const filePath = `${currentUser.id}/${listingId}/${fileName}`; // Path: uid/lid/file
 
-      // 3. Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
       if(uploadError) throw uploadError;
 
-      // 4. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
 
-      // 5. Update DB
-      const { error: dbError } = await supabase
-        .from('listing')
-        .update({ [fieldKey]: publicUrl })
-        .eq('id', listingId);
-
+      const { error: dbError } = await supabase.from('listing').update({ [fieldKey]: publicUrl }).eq('id', listingId);
       if(dbError) throw dbError;
 
-      // 6. Refresh UI
-      showModalStatus('Photo uploaded!', false);
-      
-      // Fetch updated listing to re-render slots
+      showModalStatus('Uploaded!', false);
       const { data: updatedListing } = await supabase.from('listing').select('*').eq('id', listingId).single();
       renderPhotoSlots(updatedListing);
-      
-      // Also update background list
       loadListings();
-
     } catch (err) {
       console.error(err);
       showModalStatus(`Upload failed: ${err.message}`, true);
@@ -453,42 +416,23 @@
   }
 
   window.deletePhoto = async function(fieldKey, currentUrl) {
-    if(!confirm("Remove this photo?")) return;
+    if(!confirm("Remove photo?")) return;
     const listingId = inpId.value;
-    showModalStatus('Deleting photo...', false);
-
     try {
-      // 1. Try to remove from storage (Extract path from URL)
-      // URL format: .../storage/v1/object/public/listing-images/public/uid/lid/file.jpg
-      // We need path after bucket name.
       const urlObj = new URL(currentUrl);
       const pathParts = urlObj.pathname.split(`/${BUCKET_NAME}/`);
       if(pathParts.length > 1) {
-        const path = decodeURIComponent(pathParts[1]); // e.g. public/...
-        await supabase.storage.from(BUCKET_NAME).remove([path]);
+        await supabase.storage.from(BUCKET_NAME).remove([decodeURIComponent(pathParts[1])]);
       }
-
-      // 2. Update DB (set to null)
-      const { error } = await supabase
-        .from('listing')
-        .update({ [fieldKey]: null })
-        .eq('id', listingId);
-        
-      if(error) throw error;
-
-      showModalStatus('Photo removed.', false);
+      await supabase.from('listing').update({ [fieldKey]: null }).eq('id', listingId);
       
-      // Refresh
       const { data: updatedListing } = await supabase.from('listing').select('*').eq('id', listingId).single();
       renderPhotoSlots(updatedListing);
       loadListings();
-
     } catch (err) {
       console.error(err);
-      showModalStatus(`Delete failed: ${err.message}`, true);
     }
   };
-
 </script>
 </body>
 </html>
