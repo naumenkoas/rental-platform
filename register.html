@@ -5,6 +5,7 @@
   <title>Rental Platform - Register</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
   <div class="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full">
@@ -59,9 +60,14 @@
   </div>
 
 <script>
-  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  // Ждем загрузки окна и supabase.js
+  window.addEventListener('load', () => {
+    if (!window.sb) {
+      console.error("Supabase client (window.sb) not found. Check supabase.js loading.");
+      document.getElementById("errorMsg").textContent = "System Error: connection failed.";
+      document.getElementById("errorMsg").classList.remove("hidden");
+    }
+  });
 
   const registerBtn = document.getElementById("registerBtn");
   const errorMsg = document.getElementById("errorMsg");
@@ -84,48 +90,46 @@
       return;
     }
 
-    // 1. Регистрация пользователя (Sign Up)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password
-    });
+    try {
+      // 1. Регистрация (Auth) через window.sb
+      const { data: authData, error: authError } = await window.sb.auth.signUp({
+        email,
+        password
+      });
 
-    if (authError) {
-      showError(authError.message);
-      resetBtn();
-      return;
-    }
+      if (authError) throw authError;
 
-    // Проверяем, создался ли юзер
-    if (authData && authData.user) {
-      const userId = authData.user.id;
+      if (authData && authData.user) {
+        const userId = authData.user.id;
 
-      // 2. Создаем запись в таблице profiles
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert([{ id: userId, role: role }]);
+        // 2. Создание профиля (DB) через window.sb
+        const { error: profileError } = await window.sb
+          .from("profiles")
+          .insert([{ id: userId, role: role }]);
 
-      if (profileError) {
-        console.error("Profile error", profileError);
-        // Даже если профиль не создался, юзер уже есть в Auth. 
-        // Но без профиля он не войдет.
-        showError("Account created, but profile setup failed. Please contact support.");
+        if (profileError) {
+          console.error("Profile error", profileError);
+          // Аккаунт создан, но профиль нет. Критическая ошибка логики, но юзер уже есть.
+          showError("Account created, but profile setup failed. Contact support.");
+          resetBtn();
+          return;
+        }
+
+        // УСПЕХ
+        successMsg.textContent = "Success! Redirecting to login...";
+        successMsg.classList.remove("hidden");
+        
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 1500);
+
+      } else {
+        showError("Check your email for confirmation link (if enabled).");
         resetBtn();
-        return;
       }
-
-      // УСПЕХ
-      successMsg.textContent = "Success! Redirecting to login...";
-      successMsg.classList.remove("hidden");
-      
-      // Ждем секунду и перекидываем на вход
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 1500);
-
-    } else {
-      // Если включено подтверждение email
-      showError("Check your email for the confirmation link.");
+    } catch (err) {
+      console.error(err);
+      showError(err.message || "Registration failed.");
       resetBtn();
     }
   });
