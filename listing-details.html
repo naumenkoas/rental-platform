@@ -53,7 +53,7 @@
             <h2 class="text-lg font-semibold text-slate-800" id="chatTitle">Conversation</h2>
             <p id="chatInfo" class="text-xs text-slate-500"></p>
           </div>
-          <button id="hideConversationBtn"
+          <button id="toggleHideBtn"
             class="text-xs px-3 py-1 rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50 transition hidden">
             Hide conversation
           </button>
@@ -80,10 +80,14 @@
       </div>
     </section>
 
-    <!-- ФОРМА ДЛЯ ГОСТЕЙ (одиночное сообщение) -->
+    <!-- ФОРМА ДЛЯ ГОСТЕЙ (разовое сообщение) -->
     <section id="guestSection" class="mt-6 hidden">
       <div class="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
         <h2 class="text-lg font-semibold text-slate-800">Contact landlord</h2>
+        <p class="text-xs text-slate-500">
+          You can send a single message as a guest.  
+          For full chat history, please <a href="register.html" class="text-emerald-700 underline">sign up</a> as a tenant.
+        </p>
         <textarea id="guestMessage" rows="3" placeholder="Your message..."
           class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
         <input id="guestEmail" type="email" placeholder="Your email"
@@ -108,17 +112,18 @@
   const chatSectionEl = document.getElementById("chatSection");
   const chatMessagesEl = document.getElementById("chatMessages");
   const chatInfoEl = document.getElementById("chatInfo");
+  const chatTitleEl = document.getElementById("chatTitle");
   const chatInputEl = document.getElementById("chatInput");
   const chatEmailEl = document.getElementById("chatEmail");
   const chatStatusEl = document.getElementById("chatStatus");
   const sendBtnEl = document.getElementById("sendBtn");
-  const hideConversationBtn = document.getElementById("hideConversationBtn");
+  const toggleHideBtn = document.getElementById("toggleHideBtn");
+
   const guestSectionEl = document.getElementById("guestSection");
   const guestMessageEl = document.getElementById("guestMessage");
   const guestEmailEl = document.getElementById("guestEmail");
   const guestSendBtn = document.getElementById("guestSendBtn");
   const guestStatusEl = document.getElementById("guestStatus");
-  const chatTitleEl = document.getElementById("chatTitle");
 
   let currentUser = null;
   let currentProfile = null;
@@ -126,6 +131,8 @@
 
   let threadTenantId = null;
   let threadTenantEmail = null;
+
+  let currentRoleForChat = null; // "landlord" | "tenant"
 
   function setStatus(text, isError = false) {
     statusEl.textContent = text;
@@ -163,7 +170,7 @@
       return;
     }
 
-    // 1. Загружаем объявление
+    // 1. объявление
     const { data: listing, error: listErr } = await supabase
       .from("listing")
       .select("*")
@@ -182,7 +189,7 @@
     currentListing = listing;
     fillListing(listing);
 
-    // 2. Получаем текущего пользователя и профиль
+    // 2. auth + профиль
     const { data: authData } = await supabase.auth.getUser();
     if (authData && authData.user) {
       currentUser = authData.user;
@@ -196,7 +203,6 @@
       }
     }
 
-    // 3. Если объявление неактивно — просто сообщение и всё
     if (currentListing.is_active === false) {
       setStatus("This listing is inactive.", false);
       chatSectionEl.classList.remove("hidden");
@@ -205,11 +211,10 @@
       return;
     }
 
-    // 4. Определяем контекст: лендлорд / тенант / гость
     const isLandlord = currentProfile && currentProfile.role === "landlord";
     const isTenant = currentProfile && currentProfile.role === "tenant";
 
-    // Гость (не залогинен)
+    // ГОСТЬ
     if (!currentUser) {
       setStatus("", false);
       contentEl.classList.remove("hidden");
@@ -218,12 +223,11 @@
       return;
     }
 
-    // Лендлорд
+    // ЛЕНДЛОРД
     if (isLandlord) {
       setStatus("", false);
       contentEl.classList.remove("hidden");
 
-      // Лендлорд должен прийти с tenant_id или tenant_email
       if (!tenantIdFromUrl && !tenantEmailFromUrl) {
         chatSectionEl.classList.remove("hidden");
         chatMessagesEl.textContent =
@@ -234,48 +238,50 @@
 
       threadTenantId = tenantIdFromUrl || null;
       threadTenantEmail = tenantEmailFromUrl || null;
+      currentRoleForChat = "landlord";
 
       chatSectionEl.classList.remove("hidden");
       document.getElementById("chatFooter").classList.remove("hidden");
-      hideConversationBtn.classList.remove("hidden");
+      toggleHideBtn.classList.remove("hidden");
       chatTitleEl.textContent = "Conversation with tenant";
       chatInfoEl.textContent =
         threadTenantEmail
           ? `Tenant email: ${threadTenantEmail}`
           : "Registered tenant";
 
-      chatEmailEl.classList.add("hidden"); // лендлорд email не вводит
+      chatEmailEl.classList.add("hidden");
 
-      hideConversationBtn.addEventListener("click", hideConversationForLandlord);
+      toggleHideBtn.addEventListener("click", toggleHideConversationForLandlord);
       sendBtnEl.addEventListener("click", () => sendMessageAsLandlord(listingId));
 
       await loadMessagesForThread(listingId, "landlord");
       return;
     }
 
-    // Тенант (залогинен)
+    // ТЕНАНТ
     if (isTenant) {
       setStatus("", false);
       contentEl.classList.remove("hidden");
 
       threadTenantId = currentUser.id;
       threadTenantEmail = currentUser.email || null;
+      currentRoleForChat = "tenant";
 
       chatSectionEl.classList.remove("hidden");
       document.getElementById("chatFooter").classList.remove("hidden");
-      hideConversationBtn.classList.remove("hidden");
+      toggleHideBtn.classList.remove("hidden");
       chatTitleEl.textContent = "Conversation with landlord";
       chatInfoEl.textContent = "You are logged in as tenant.";
       chatEmailEl.classList.add("hidden");
 
-      hideConversationBtn.addEventListener("click", hideConversationForTenant);
+      toggleHideBtn.addEventListener("click", toggleHideConversationForTenant);
       sendBtnEl.addEventListener("click", () => sendMessageAsTenant(listingId));
 
       await loadMessagesForThread(listingId, "tenant");
       return;
     }
 
-    // На случай, если роль какая-то иная/битая
+    // Остальные роли — просто объявление
     setStatus("", false);
     contentEl.classList.remove("hidden");
     chatSectionEl.classList.remove("hidden");
@@ -341,7 +347,7 @@
     contentEl.classList.remove("hidden");
   }
 
-  // --------- ГОСТЬ: одиночное сообщение ---------
+  // --------- ГОСТЕВОЕ СООБЩЕНИЕ ---------
 
   function setupGuestForm(listingId) {
     guestSectionEl.classList.remove("hidden");
@@ -398,17 +404,15 @@
       .eq("listing_id", listingId)
       .order("created_at", { ascending: true });
 
+    // не фильтруем hidden_* специально, чтобы можно было вернуть скрытый диалог
     if (role === "landlord") {
-      query = query.eq("hidden_for_landlord", false);
       if (threadTenantId) {
         query = query.eq("tenant_id", threadTenantId);
       } else if (threadTenantEmail) {
         query = query.eq("tenant_email", threadTenantEmail);
       }
     } else if (role === "tenant") {
-      query = query
-        .eq("hidden_for_tenant", false)
-        .eq("tenant_id", threadTenantId);
+      query = query.eq("tenant_id", threadTenantId);
     }
 
     const { data, error } = await query;
@@ -421,10 +425,20 @@
 
     if (!data || data.length === 0) {
       chatMessagesEl.textContent = "No messages yet. Start the conversation.";
+      toggleHideBtn.textContent = "Hide conversation";
       return;
     }
 
-    // Отмечаем прочитанными
+    const allHiddenForLandlord =
+      role === "landlord" && data.every(m => m.hidden_for_landlord);
+    const allHiddenForTenant =
+      role === "tenant" && data.every(m => m.hidden_for_tenant);
+
+    const isHiddenForRole =
+      (role === "landlord" && allHiddenForLandlord) ||
+      (role === "tenant" && allHiddenForTenant);
+
+    // помечаем прочитанными
     const idsToMark = [];
     if (role === "landlord") {
       data.forEach(msg => {
@@ -452,12 +466,33 @@
       }
     }
 
-    // Рендер
+    if (isHiddenForRole) {
+      chatMessagesEl.innerHTML =
+        '<p class="text-xs text-slate-500">Conversation is hidden. Click “Show conversation” to see messages again.</p>';
+      toggleHideBtn.textContent = "Show conversation";
+      return;
+    }
+
+    toggleHideBtn.textContent = "Hide conversation";
+
+    // отрисуем только НЕ скрытые сообщения
+    const filtered = data.filter(msg =>
+      role === "landlord" ? !msg.hidden_for_landlord : !msg.hidden_for_tenant
+    );
+
+    if (!filtered.length) {
+      chatMessagesEl.textContent =
+        "No visible messages. Conversation might be partially hidden.";
+      return;
+    }
+
     chatMessagesEl.innerHTML = "";
-    data.forEach(msg => {
+
+    filtered.forEach(msg => {
       const wrapper = document.createElement("div");
-      const mine = (role === "landlord" && msg.is_from_landlord) ||
-                   (role === "tenant" && !msg.is_from_landlord);
+      const mine =
+        (role === "landlord" && msg.is_from_landlord) ||
+        (role === "tenant" && !msg.is_from_landlord);
 
       wrapper.className =
         "mb-2 flex " + (mine ? "justify-end" : "justify-start");
@@ -523,15 +558,10 @@
       return;
     }
 
-    const role =
-      currentProfile && currentProfile.role === "landlord"
-        ? "landlord"
-        : "tenant";
-
-    await loadMessagesForThread(currentListing.id, role);
+    await loadMessagesForThread(currentListing.id, currentRoleForChat);
   }
 
-  // --------- ОТПРАВКА СООБЩЕНИЙ ---------
+  // --------- ОТПРАВКА ---------
 
   async function sendMessageAsTenant(listingId) {
     const text = chatInputEl.value.trim();
@@ -601,55 +631,96 @@
     await loadMessagesForThread(listingId, "landlord");
   }
 
-  // --------- СКРЫТИЕ ДИАЛОГА ---------
+  // --------- СКРЫТИЕ / ПОКАЗ ДИАЛОГА ---------
 
-  async function hideConversationForTenant() {
-    if (!confirm("Hide this conversation from your view? Messages will not be deleted.")) {
-      return;
-    }
+  async function toggleHideConversationForTenant() {
+    if (!threadTenantId) return;
 
-    const { error } = await supabase
+    // смотрим, сейчас скрыто или нет
+    const { data, error } = await supabase
       .from("messages")
-      .update({ hidden_for_tenant: true })
+      .select("id, hidden_for_tenant")
       .eq("listing_id", currentListing.id)
       .eq("tenant_id", threadTenantId);
 
     if (error) {
-      console.error("hideConversationForTenant error", error);
-      alert(error.message || "Failed to hide conversation.");
+      console.error("check hide tenant error", error);
+      alert(error.message || "Failed to check conversation state.");
       return;
     }
 
-    chatMessagesEl.textContent = "Conversation hidden.";
-    document.getElementById("chatFooter").classList.add("hidden");
+    const allHidden = data && data.length && data.every(m => m.hidden_for_tenant);
+    const newHidden = !allHidden;
+
+    const confirmText = newHidden
+      ? "Hide this conversation for you?"
+      : "Show this conversation again?";
+    if (!confirm(confirmText)) return;
+
+    const { error: updErr } = await supabase
+      .from("messages")
+      .update({ hidden_for_tenant: newHidden })
+      .eq("listing_id", currentListing.id)
+      .eq("tenant_id", threadTenantId);
+
+    if (updErr) {
+      console.error("hideConversationForTenant error", updErr);
+      alert(updErr.message || "Failed to update conversation visibility.");
+      return;
+    }
+
+    await loadMessagesForThread(currentListing.id, "tenant");
   }
 
-  async function hideConversationForLandlord() {
-    if (!confirm("Hide this conversation from your inbox? Messages will not be deleted.")) {
-      return;
-    }
+  async function toggleHideConversationForLandlord() {
+    if (!threadTenantId && !threadTenantEmail) return;
 
-    let query = supabase
+    const filters = supabase
       .from("messages")
-      .update({ hidden_for_landlord: true })
+      .select("id, hidden_for_landlord")
       .eq("listing_id", currentListing.id);
 
+    let query = filters;
     if (threadTenantId) {
       query = query.eq("tenant_id", threadTenantId);
     } else if (threadTenantEmail) {
       query = query.eq("tenant_email", threadTenantEmail);
     }
 
-    const { error } = await query;
-
+    const { data, error } = await query;
     if (error) {
-      console.error("hideConversationForLandlord error", error);
-      alert(error.message || "Failed to hide conversation.");
+      console.error("check hide landlord error", error);
+      alert(error.message || "Failed to check conversation state.");
       return;
     }
 
-    chatMessagesEl.textContent = "Conversation hidden.";
-    document.getElementById("chatFooter").classList.add("hidden");
+    const allHidden = data && data.length && data.every(m => m.hidden_for_landlord);
+    const newHidden = !allHidden;
+
+    const confirmText = newHidden
+      ? "Hide this conversation from your view?"
+      : "Show this conversation again?";
+    if (!confirm(confirmText)) return;
+
+    let upd = supabase
+      .from("messages")
+      .update({ hidden_for_landlord: newHidden })
+      .eq("listing_id", currentListing.id);
+
+    if (threadTenantId) {
+      upd = upd.eq("tenant_id", threadTenantId);
+    } else if (threadTenantEmail) {
+      upd = upd.eq("tenant_email", threadTenantEmail);
+    }
+
+    const { error: updErr } = await upd;
+    if (updErr) {
+      console.error("hideConversationForLandlord error", updErr);
+      alert(updErr.message || "Failed to update conversation visibility.");
+      return;
+    }
+
+    await loadMessagesForThread(currentListing.id, "landlord");
   }
 </script>
 </body>
