@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Rental marketplace – Home</title>
+  <title>Rental marketplace</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
@@ -11,16 +11,10 @@
   <div class="max-w-6xl mx-auto py-8 px-4">
     
     <header class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-slate-800">Rental marketplace</h1>
-        <p class="text-sm text-slate-600">Guest access enabled.</p>
-      </div>
+      <h1 class="text-3xl font-bold text-slate-800">Rental marketplace</h1>
       <div class="flex gap-2">
-         <a href="#public-search"
-           class="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 text-sm font-semibold hover:bg-slate-50 transition">
-          Browse as guest
-        </a>
-        <a href="register.html" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">Sign up</a>
+        <a href="#search" class="px-4 py-2 border rounded-xl hover:bg-slate-50">Browse as guest</a>
+        <a href="register.html" class="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700">Sign up</a>
       </div>
     </header>
 
@@ -29,183 +23,103 @@
         <h2 class="text-lg font-semibold mb-3">Sign in</h2>
         
         <div id="loginForm" class="space-y-2">
-          <input id="loginEmail" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
-          <input id="loginPassword" type="password" placeholder="Password" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
-          <button id="loginBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition">Log in</button>
-          <p id="loginStatus" class="text-xs mt-1 text-slate-500 min-h-[1rem]"></p>
+          <input id="loginEmail" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-xl" />
+          <input id="loginPassword" type="password" placeholder="Password" class="w-full px-3 py-2 border rounded-xl" />
+          <button id="loginBtn" class="w-full px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900">Log in</button>
+          <p id="loginStatus" class="text-xs mt-1 text-slate-500"></p>
         </div>
 
         <div id="loggedInActions" class="hidden space-y-2">
-          <p id="userInfo" class="text-sm text-slate-600 mb-2"></p>
-          <button id="goDashboardBtn" class="w-full px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold">Go to Dashboard</button>
-          <button id="logoutBtn" class="w-full px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold">Log out</button>
+          <p id="userInfo" class="text-sm text-slate-600"></p>
+          <button id="goDashboardBtn" class="w-full px-4 py-2 bg-emerald-600 text-white rounded-xl">Go to Dashboard</button>
+          <button onclick="logout()" class="w-full px-4 py-2 border rounded-xl">Log out</button>
         </div>
       </div>
-
-      <div class="bg-white rounded-2xl shadow p-5 flex flex-col justify-center">
-        <h2 class="text-lg font-semibold mb-2">How it works</h2>
-        <ul class="text-sm text-slate-600 space-y-2">
-            <li>• <b>Guests</b> can browse listings below without an account.</li>
-            <li>• <b>Tenants</b> can create an account to chat with landlords.</li>
-            <li>• <b>Landlords</b> can list properties and manage photos.</li>
-        </ul>
-        <p class="text-xs text-slate-400 mt-4">Active Listings are visible to search engines.</p>
+      
+      <div class="bg-white rounded-2xl shadow p-5 flex items-center justify-center text-slate-500 text-sm">
+        Log in to chat and manage favorites.
       </div>
     </section>
 
-    <section id="public-search" class="mb-6 bg-white rounded-2xl shadow p-5">
+    <section id="search" class="bg-white rounded-2xl shadow p-5">
       <h2 class="text-lg font-semibold mb-3">Search rentals</h2>
-
-      <div class="grid md:grid-cols-4 gap-3 mb-3 text-sm">
-        <input id="filterCity" type="text" placeholder="City" class="px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-        <input id="filterMinPrice" type="number" placeholder="Min price" class="px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-        <input id="filterMaxPrice" type="number" placeholder="Max price" class="px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-        <label class="flex items-center gap-1 text-slate-700">
-          <input id="filterActive" type="checkbox" checked disabled /> <span>Showing Active Only</span>
-        </label>
+      <div class="flex gap-2 mb-4">
+        <input id="filterCity" type="text" placeholder="City" class="border rounded-xl px-3 py-2 w-full">
+        <button onclick="loadListings()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl">Search</button>
       </div>
-
-      <div class="flex gap-3 mb-4">
-        <button id="applyFiltersBtn" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">Apply filters</button>
-        <button id="resetFiltersBtn" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">Reset</button>
-      </div>
-
-      <div id="listingsContainer" class="grid md:grid-cols-3 gap-4 text-sm text-slate-700">
-        Loading listings...
-      </div>
+      <div id="listingsContainer" class="grid md:grid-cols-3 gap-4">Loading...</div>
     </section>
   </div>
 
 <script>
-  // Элементы Логина
-  const loginEmailEl = document.getElementById("loginEmail");
-  const loginPasswordEl = document.getElementById("loginPassword");
-  const loginBtnEl = document.getElementById("loginBtn");
-  const loginStatusEl = document.getElementById("loginStatus");
-  const loginFormEl = document.getElementById("loginForm");
-  const loggedInActionsEl = document.getElementById("loggedInActions");
-  const userInfoEl = document.getElementById("userInfo");
-
-  // Элементы Поиска
-  const listingsContainer = document.getElementById("listingsContainer");
-  const applyFiltersBtn = document.getElementById("applyFiltersBtn");
-  const resetFiltersBtn = document.getElementById("resetFiltersBtn");
-
   window.addEventListener("load", async () => {
-    // 1. Проверяем инициализацию
-    if (!window.sb) {
-      loginStatusEl.textContent = "Error: System not initialized. Check supabase.js";
-      listingsContainer.textContent = "Error loading listings: System connection failed.";
-      return;
-    }
-    
-    // 2. Проверяем сессию
+    if (!window.sb) return;
     checkSession();
-
-    // 3. Загружаем объявления (Восстанавливаем показ на главной!)
-    loadPublicListings();
+    loadListings();
   });
 
-  // --- LOGIN LOGIC ---
   async function checkSession() {
     const { data: { user } } = await window.sb.auth.getUser();
     if (user) {
-      const profile = await getCurrentProfile(); // из supabase.js
+      const profile = await getCurrentProfile();
       showLoggedInUI(user, profile?.role);
     }
   }
 
   function showLoggedInUI(user, role) {
-    loginFormEl.classList.add("hidden");
-    loggedInActionsEl.classList.remove("hidden");
-    userInfoEl.textContent = `Logged in as ${user.email} (${role || 'user'})`;
-
+    document.getElementById("loginForm").classList.add("hidden");
+    document.getElementById("loggedInActions").classList.remove("hidden");
+    document.getElementById("userInfo").textContent = `Hello, ${user.email}`;
+    
+    // ПРЯМОЙ РЕДИРЕКТ
     document.getElementById("goDashboardBtn").onclick = () => {
       if (role === 'landlord') window.location.href = 'landlord.html';
       else window.location.href = 'tenant.html';
     };
-    document.getElementById("logoutBtn").onclick = () => logout();
   }
 
-  loginBtnEl.addEventListener("click", async () => {
-    const email = loginEmailEl.value.trim();
-    const password = loginPasswordEl.value;
-    if (!email || !password) return;
+  document.getElementById("loginBtn").onclick = async () => {
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+    const status = document.getElementById("loginStatus");
 
-    loginBtnEl.disabled = true;
-    loginStatusEl.textContent = "Signing in...";
+    status.textContent = "Signing in...";
+    const { error } = await window.sb.auth.signInWithPassword({ email, password });
     
-    const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
     if (error) {
-      loginStatusEl.textContent = error.message;
-      loginStatusEl.className = "text-xs mt-1 text-red-600";
-      loginBtnEl.disabled = false;
+      status.textContent = error.message;
+      status.classList.add("text-red-600");
     } else {
-      loginStatusEl.textContent = "Success!";
-      checkSession();
+      status.textContent = "Success! Redirecting...";
+      // Сразу проверяем сессию и редиректим
+      const profile = await getCurrentProfile();
+      if (profile?.role === 'landlord') window.location.href = 'landlord.html';
+      else window.location.href = 'tenant.html';
     }
-  });
-
-  // --- SEARCH LOGIC (Для гостей) ---
-  
-  applyFiltersBtn.onclick = loadPublicListings;
-  resetFiltersBtn.onclick = () => {
-      document.getElementById("filterCity").value = "";
-      document.getElementById("filterMinPrice").value = "";
-      document.getElementById("filterMaxPrice").value = "";
-      loadPublicListings();
   };
 
-  async function loadPublicListings() {
-      listingsContainer.innerHTML = '<p class="col-span-full text-slate-500">Loading...</p>';
-      
-      let query = window.sb
-        .from("listing")
-        .select("*")
-        .eq("is_active", true) // Только активные для главной
-        .order("created_at", { ascending: false });
-
-      // Фильтры
-      const city = document.getElementById("filterCity").value.trim();
-      const minP = document.getElementById("filterMinPrice").value;
-      const maxP = document.getElementById("filterMaxPrice").value;
-
-      if (city) query = query.ilike("city", `%${city}%`);
-      if (minP) query = query.gte("price_per_month", parseInt(minP));
-      if (maxP) query = query.lte("price_per_month", parseInt(maxP));
-
-      const { data, error } = await query;
-
-      if (error) {
-          console.error(error);
-          listingsContainer.innerHTML = `<p class="col-span-full text-red-500">Error loading: ${error.message}</p>`;
-          return;
-      }
-
-      if (!data || !data.length) {
-          listingsContainer.innerHTML = '<p class="col-span-full text-slate-500">No active listings found.</p>';
-          return;
-      }
-
-      listingsContainer.innerHTML = "";
-      data.forEach(item => {
-          const card = document.createElement("div");
-          card.className = "border rounded-2xl p-3 flex flex-col gap-2 hover:bg-slate-50 transition cursor-pointer";
-          // При клике на карточку переходим к деталям
-          card.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
-
-          const img = item.main_photo_url || "https://via.placeholder.com/160?text=No+Photo";
-          
-          card.innerHTML = `
-             <div class="h-32 bg-slate-200 rounded-xl overflow-hidden mb-2">
-                <img src="${img}" class="w-full h-full object-cover" alt="${item.title}">
-             </div>
-             <div class="font-bold text-slate-800 text-sm truncate">${item.title}</div>
-             <div class="text-xs text-slate-500">${item.city}</div>
-             <div class="text-emerald-700 font-bold text-sm">$${item.price_per_month}/mo</div>
-          `;
-          listingsContainer.appendChild(card);
-      });
+  async function loadListings() {
+    const city = document.getElementById("filterCity").value;
+    let q = window.sb.from("listing").select("*").eq("is_active", true).order("created_at", {ascending:false});
+    if(city) q = q.ilike("city", `%${city}%`);
+    
+    const { data } = await q;
+    const cont = document.getElementById("listingsContainer");
+    cont.innerHTML = "";
+    if(!data || !data.length) { cont.innerHTML = "No active listings."; return; }
+    
+    data.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "border rounded-xl p-3 cursor-pointer hover:bg-slate-50";
+      div.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
+      div.innerHTML = `
+        <img src="${item.main_photo_url || 'https://via.placeholder.com/150'}" class="w-full h-32 object-cover rounded bg-slate-200 mb-2">
+        <div class="font-bold">$${item.price_per_month}</div>
+        <div class="text-sm">${item.title}</div>
+        <div class="text-xs text-slate-500">${item.city}</div>
+      `;
+      cont.appendChild(div);
+    });
   }
 </script>
 </body>
