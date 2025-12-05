@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -9,148 +9,181 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-  <nav class="bg-white shadow-sm sticky top-0 z-50 p-4 flex justify-between">
+  <nav class="bg-white shadow p-4 flex justify-between sticky top-0 z-50">
     <a href="index.html" class="font-bold text-slate-800">Rental Marketplace</a>
     <button onclick="history.back()" class="text-sm font-semibold">← Back</button>
   </nav>
 
-  <div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="max-w-5xl mx-auto py-8 px-4 grid md:grid-cols-3 gap-8">
     
-    <div id="listingContent" class="grid md:grid-cols-2 gap-8 hidden">
-      <div>
-        <div class="aspect-video bg-slate-200 rounded-xl overflow-hidden mb-2">
-          <img id="mainImg" class="w-full h-full object-cover">
-        </div>
-        <div id="thumbs" class="grid grid-cols-4 gap-2"></div>
+    <div class="md:col-span-2 space-y-6">
+      <div class="aspect-video bg-slate-200 rounded-xl overflow-hidden shadow">
+        <img id="mainImg" class="w-full h-full object-cover">
       </div>
-      <div>
-        <h1 id="title" class="text-3xl font-bold mb-1">Loading...</h1>
-        <p id="city" class="text-slate-500 mb-4"></p>
-        <div class="text-2xl font-bold text-emerald-600 mb-6" id="price"></div>
-        <p id="desc" class="text-slate-700 whitespace-pre-wrap mb-6"></p>
+      <div id="thumbs" class="grid grid-cols-4 gap-2 h-20"></div>
+
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h1 id="title" class="text-3xl font-bold mb-2">Loading...</h1>
+        <div class="text-2xl font-bold text-emerald-600 mb-4" id="price"></div>
+        <p id="desc" class="text-slate-700 whitespace-pre-line"></p>
         
-        <div class="bg-white border rounded-xl shadow-sm p-4">
-          <h3 class="font-bold border-b pb-2 mb-2">Chat with Landlord</h3>
-          <div id="chatBox" class="h-64 overflow-y-auto bg-slate-50 p-3 rounded mb-3 text-sm flex flex-col gap-2">
-            <p class="text-slate-400 text-center mt-10">Sign in to view history or start chatting.</p>
-          </div>
-          <div class="flex gap-2">
-            <input id="chatMsg" type="text" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="Type message...">
-            <button id="sendBtn" class="bg-slate-800 text-white px-4 py-2 rounded font-bold text-sm">Send</button>
-          </div>
-          <input id="guestEmail" class="w-full mt-2 border rounded px-3 py-2 text-sm hidden" placeholder="Your email (required for guests)">
+        <button id="favBtn" class="mt-6 w-full border-2 border-emerald-600 text-emerald-700 font-bold py-2 rounded-xl hover:bg-emerald-50 hidden">
+          ☆ Add to Favorites
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="bg-white p-4 rounded-xl shadow border border-slate-200 h-[500px] flex flex-col">
+        <h3 class="font-bold border-b pb-2 mb-2">Message Landlord</h3>
+        
+        <div id="chatBox" class="flex-1 overflow-y-auto bg-slate-50 p-3 rounded mb-3 text-sm space-y-2">
+           <p class="text-center text-slate-400 mt-10">Loading chat...</p>
+        </div>
+
+        <div class="space-y-2">
+           <input id="guestEmail" class="w-full border rounded px-3 py-2 text-sm hidden" placeholder="Your Email (Required)">
+           <textarea id="chatMsg" class="w-full border rounded px-3 py-2 text-sm" rows="2" placeholder="Type message..."></textarea>
+           <button id="sendBtn" class="w-full bg-slate-800 text-white font-bold py-2 rounded text-sm hover:bg-slate-900">Send Message</button>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-  let listingId, currentUser, role, currentListing;
-  
+  let listingId, currentUser;
+
   window.addEventListener('load', async () => {
     if(!window.sb) return;
+    
     const params = new URLSearchParams(window.location.search);
     listingId = params.get('id');
-    if(!listingId) { alert("No ID"); return; }
+    if(!listingId) { alert("No Listing ID"); return; }
 
     const {data:{user}} = await window.sb.auth.getUser();
     currentUser = user;
-    if(currentUser) {
-       const prof = await getCurrentProfile();
-       role = prof?.role;
-    }
 
     await loadListing();
-    await loadChat();
+    
+    // Только для Тенанта показываем кнопку избранного
+    if(currentUser) {
+      const prof = await getCurrentProfile();
+      if(prof?.role === 'tenant') {
+        initFavBtn();
+      }
+    }
+    
+    loadChat();
   });
 
   async function loadListing() {
     const { data } = await window.sb.from('listing').select('*').eq('id', listingId).single();
     if(!data) return;
-    currentListing = data;
 
-    document.getElementById('listingContent').classList.remove('hidden');
     document.getElementById('title').textContent = data.title;
-    document.getElementById('city').textContent = data.city;
     document.getElementById('price').textContent = `$${data.price_per_month}/mo`;
-    document.getElementById('desc').textContent = data.description;
+    document.getElementById('desc').textContent = data.description || "No description.";
     
-    // Images
     const imgs = [data.main_photo_url, data.photo2_url, data.photo3_url, data.photo4_url].filter(Boolean);
     if(imgs.length) {
-       document.getElementById('mainImg').src = imgs[0];
-       document.getElementById('thumbs').innerHTML = imgs.map(url => 
-         `<img src="${url}" class="h-16 w-full object-cover rounded cursor-pointer border hover:border-emerald-500" onclick="document.getElementById('mainImg').src='${url}'">`
-       ).join('');
+      document.getElementById('mainImg').src = imgs[0];
+      document.getElementById('thumbs').innerHTML = imgs.map(u => 
+        `<img src="${u}" class="w-full h-full object-cover rounded cursor-pointer border hover:border-emerald-500" onclick="document.getElementById('mainImg').src='${u}'">`
+      ).join('');
+    }
+  }
+
+  // --- FAV LOGIC ---
+  async function initFavBtn() {
+    const btn = document.getElementById('favBtn');
+    btn.classList.remove('hidden');
+    
+    // Check status
+    const { data } = await window.sb.from('favorites').select('id').eq('user_id', currentUser.id).eq('listing_id', listingId).maybeSingle();
+    let isFav = !!data;
+    updateBtn(isFav);
+
+    btn.onclick = async () => {
+      if(isFav) {
+        await window.sb.from('favorites').delete().eq('user_id', currentUser.id).eq('listing_id', listingId);
+        isFav = false;
+      } else {
+        await window.sb.from('favorites').insert([{ listing_id: listingId }]); // user_id is auto
+        isFav = true;
+      }
+      updateBtn(isFav);
+    }
+    
+    function updateBtn(state) {
+       btn.textContent = state ? "★ Saved to Favorites" : "☆ Add to Favorites";
+       btn.className = state 
+         ? "mt-6 w-full bg-emerald-600 text-white font-bold py-2 rounded-xl"
+         : "mt-6 w-full border-2 border-emerald-600 text-emerald-700 font-bold py-2 rounded-xl hover:bg-emerald-50";
     }
   }
 
   // --- CHAT LOGIC ---
   async function loadChat() {
     const box = document.getElementById('chatBox');
-    
-    // Логика "Чей это чат?"
-    let threadId = currentUser ? currentUser.id : null;
-    let threadEmail = currentUser ? currentUser.email : null;
-    
-    // Если смотрит Лендлорд
-    if(role === 'landlord' && currentListing.owner_id === currentUser.id) {
-       const urlId = new URLSearchParams(window.location.search).get('tenant_id');
-       const urlEmail = new URLSearchParams(window.location.search).get('tenant_email');
-       
-       if(!urlId && !urlEmail) {
-         box.innerHTML = '<p class="text-center text-slate-500 mt-10">This is your listing.<br>Check dashboard for messages.</p>';
-         document.getElementById('sendBtn').disabled = true;
-         return;
-       }
-       threadId = urlId;
-       threadEmail = urlEmail;
-    }
+    const sendBtn = document.getElementById('sendBtn');
+    const guestInput = document.getElementById('guestEmail');
 
-    // Гость
-    if(!currentUser) {
-       document.getElementById('guestEmail').classList.remove('hidden');
-       box.innerHTML = '<p class="text-center text-slate-400 mt-2">Guests can send messages, but cannot see history here.</p>';
+    if(!currentUser) guestInput.classList.remove('hidden');
+
+    // Load history (if logged in)
+    if(currentUser) {
+      const { data } = await window.sb.from('messages')
+        .select('*')
+        .eq('listing_id', listingId)
+        .eq('tenant_id', currentUser.id) // Only my messages
+        .order('created_at');
+        
+      if(data) renderMessages(data);
     } else {
-       // Загрузка истории
-       let q = window.sb.from('messages').select('*').eq('listing_id', listingId).order('created_at');
-       
-       if(threadId) q = q.eq('tenant_id', threadId);
-       else if(threadEmail) q = q.eq('tenant_email', threadEmail);
-       
-       const {data} = await q;
-       if(data) {
-         box.innerHTML = '';
-         data.forEach(m => {
-           const isMe = (role === 'landlord' && m.is_from_landlord) || (role !== 'landlord' && !m.is_from_landlord);
-           const div = document.createElement('div');
-           div.className = `p-2 rounded max-w-[80%] text-sm ${isMe ? 'bg-emerald-100 self-end ml-auto' : 'bg-white border self-start'}`;
-           div.textContent = m.message;
-           box.appendChild(div);
-         });
-         box.scrollTop = box.scrollHeight;
-       }
+      box.innerHTML = '<p class="text-center text-slate-400 mt-10">Guests cannot view message history.</p>';
     }
 
-    // Отправка
-    document.getElementById('sendBtn').onclick = async () => {
+    sendBtn.onclick = async () => {
        const msg = document.getElementById('chatMsg').value;
        if(!msg) return;
-       
+
+       const email = currentUser ? currentUser.email : guestInput.value;
+       if(!email) { alert("Email required"); return; }
+
        const payload = {
          listing_id: listingId,
          message: msg,
-         is_from_landlord: role === 'landlord',
-         tenant_id: currentUser ? (role==='tenant'?currentUser.id : threadId) : null,
-         tenant_email: currentUser ? (role==='tenant'?currentUser.email : threadEmail) : document.getElementById('guestEmail').value
+         tenant_id: currentUser ? currentUser.id : null,
+         tenant_email: email,
+         is_from_landlord: false
        };
 
-       if(!payload.tenant_email) { alert("Email required for guest"); return; }
-       
-       await window.sb.from('messages').insert(payload);
-       document.getElementById('chatMsg').value = '';
-       if(currentUser) loadChat(); 
-       else alert('Message sent!');
+       const { error } = await window.sb.from('messages').insert(payload);
+       if(error) alert("Error: " + error.message);
+       else {
+         document.getElementById('chatMsg').value = '';
+         if(currentUser) {
+            // Reload chat
+            const { data } = await window.sb.from('messages').select('*').eq('listing_id', listingId).eq('tenant_id', currentUser.id).order('created_at');
+            renderMessages(data);
+         } else {
+            alert("Message sent to landlord!");
+         }
+       }
+    }
+
+    function renderMessages(msgs) {
+      box.innerHTML = '';
+      if(!msgs.length) { box.innerHTML = '<p class="text-center text-slate-400">No messages yet.</p>'; return; }
+      msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = m.is_from_landlord 
+          ? "bg-white border self-start p-2 rounded max-w-[80%]" 
+          : "bg-emerald-100 self-end ml-auto p-2 rounded max-w-[80%]";
+        div.textContent = m.message;
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
     }
   }
 </script>
