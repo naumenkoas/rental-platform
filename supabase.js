@@ -1,34 +1,115 @@
-// supabase.js
-const SUPABASE_URL = "https://zzkriumjamchjrxdxhzf.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+// supabase.js - Единая точка инициализации Supabase
 
-if (typeof window.supabase === 'undefined') {
-  console.error("Supabase library not loaded!");
-} else {
-  window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
+// ВАЖНО: Замените эти ключи на свои актуальные из Supabase Dashboard
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
-// --- Хелперы ---
+// Инициализация клиента
+const supabase = (function() {
+    if (typeof supabase !== 'undefined') {
+        return supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+        // Fallback если CDN не загрузился (обычно не требуется при правильном подключении в head)
+        console.error('Supabase library not loaded. Check script tag in HTML.');
+        return null;
+    }
+})();
 
-async function requireAuth(redirectTo = "index.html") {
-  const { data, error } = await window.sb.auth.getUser();
-  if (error || !data || !data.user) {
-    window.location.href = redirectTo;
-    return null;
-  }
-  return data.user;
-}
+// Глобальный объект window.sb
+window.sb = {
+    client: supabase,
 
-async function getCurrentProfile() {
-  const { data: { user } } = await window.sb.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await window.sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  return profile;
-}
+    // Проверка сессии и получение профиля
+    // Возвращает объект профиля или null
+    getCurrentProfile: async function() {
+        const { data: { session }, error: sessionError } = await this.client.auth.getSession();
+        
+        if (sessionError || !session) return null;
 
-// ИСПРАВЛЕННЫЙ LOGOUT
-async function logout() {
-  await window.sb.auth.signOut();
-  // Используем относительный путь, чтобы не ловить 404
-  window.location.replace("index.html"); 
-}
+        const { data: profile, error: profileError } = await this.client
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profileError || !profile) return null;
+
+        // ПРОВЕРКА БАНА
+        if (profile.is_banned) {
+            await this.logout();
+            alert('Ваш аккаунт заблокирован администратором.');
+            return null;
+        }
+
+        return profile;
+    },
+
+    // Обязательная проверка авторизации для защищенных страниц
+    requireAuth: async function(allowedRoles = []) {
+        const profile = await this.getCurrentProfile();
+
+        if (!profile) {
+            window.location.href = 'index.html';
+            return null;
+        }
+
+        // Если роль 'admin', пропускаем везде, кроме специфичных случаев, если нужно
+        if (profile.role === 'admin') {
+            return profile; 
+        }
+
+        if (allowedRoles.length > 0 && !allowedRoles.includes(profile.role)) {
+            // Если роль не подходит, редиректим на свой дашборд
+            if (profile.role === 'landlord') window.location.href = 'landlord.html';
+            else if (profile.role === 'tenant') window.location.href = 'tenant.html';
+            return null;
+        }
+
+        return profile;
+    },
+
+    // Вход
+    login: async function(email, password) {
+        const { data, error } = await this.client.auth.signInWithPassword({
+            email,
+            password
+        });
+        return { data, error };
+    },
+
+    // Выход
+    logout: async function() {
+        await this.client.auth.signOut();
+        window.location.href = 'index.html';
+    },
+
+    // Регистрация
+    register: async function(email, password, role) {
+        // 1. Создаем юзера в Auth
+        const { data: authData, error: authError } = await this.client.auth.signUp({
+            email,
+            password
+        });
+
+        if (authError) return { error: authError };
+
+        if (authData.user) {
+            // 2. Создаем запись в profiles
+            const { error: profileError } = await this.client
+                .from('profiles')
+                .insert([
+                    { id: authData.user.id, role: role }
+                ]);
+            
+            if (profileError) return { error: profileError };
+        }
+
+        return { data: authData };
+    },
+
+    // Хелпер: Является ли текущий юзер админом
+    isAdmin: async function() {
+        const profile = await this.getCurrentProfile();
+        return profile && profile.role === 'admin';
+    }
+};
