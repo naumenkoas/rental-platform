@@ -2,546 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Listing Details</title>
+  <title>Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-  <nav class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-      <h1 class="text-xl font-bold text-slate-800">Rental Marketplace</h1>
-      <button onclick="history.back()" class="text-sm font-semibold text-slate-600 hover:text-slate-900">
-        ← Back
-      </button>
-    </div>
+  <nav class="bg-white shadow-sm sticky top-0 z-50 p-4 flex justify-between">
+    <a href="index.html" class="font-bold text-slate-800">Rental Marketplace</a>
+    <button onclick="history.back()" class="text-sm font-semibold">← Back</button>
   </nav>
 
-  <div class="max-w-6xl mx-auto py-8 px-4">
+  <div class="max-w-5xl mx-auto py-8 px-4">
     
-    <div id="loadingState" class="text-center py-20 text-slate-500">
-      Loading listing details...
-    </div>
-
-    <div id="mainContent" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
-      <div class="lg:col-span-2 space-y-4">
-        <div class="w-full aspect-video bg-slate-200 rounded-2xl overflow-hidden shadow-sm relative group">
-          <img id="mainPhoto" src="" class="w-full h-full object-cover transition duration-300" alt="Main listing photo">
-          <div id="emptyPhotoPlaceholder" class="hidden absolute inset-0 flex items-center justify-center text-slate-400">
-            No photos available
-          </div>
+    <div id="listingContent" class="grid md:grid-cols-2 gap-8 hidden">
+      <div>
+        <div class="aspect-video bg-slate-200 rounded-xl overflow-hidden mb-2">
+          <img id="mainImg" class="w-full h-full object-cover">
         </div>
-
-        <div id="thumbnailsContainer" class="grid grid-cols-4 gap-4 h-24">
-          </div>
+        <div id="thumbs" class="grid grid-cols-4 gap-2"></div>
       </div>
-
-      <div class="space-y-6">
+      <div>
+        <h1 id="title" class="text-3xl font-bold mb-1">Loading...</h1>
+        <p id="city" class="text-slate-500 mb-4"></p>
+        <div class="text-2xl font-bold text-emerald-600 mb-6" id="price"></div>
+        <p id="desc" class="text-slate-700 whitespace-pre-wrap mb-6"></p>
         
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <div class="mb-4">
-             <h1 id="listTitle" class="text-2xl font-bold text-slate-900 leading-tight mb-1"></h1>
-             <p id="listCity" class="text-slate-500"></p>
+        <div class="bg-white border rounded-xl shadow-sm p-4">
+          <h3 class="font-bold border-b pb-2 mb-2">Chat with Landlord</h3>
+          <div id="chatBox" class="h-64 overflow-y-auto bg-slate-50 p-3 rounded mb-3 text-sm flex flex-col gap-2">
+            <p class="text-slate-400 text-center mt-10">Sign in to view history or start chatting.</p>
           </div>
-
-          <div class="flex items-baseline gap-1 mb-6">
-            <span id="listPrice" class="text-3xl font-bold text-emerald-600"></span>
-            <span class="text-slate-400 text-sm">/ month</span>
+          <div class="flex gap-2">
+            <input id="chatMsg" type="text" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="Type message...">
+            <button id="sendBtn" class="bg-slate-800 text-white px-4 py-2 rounded font-bold text-sm">Send</button>
           </div>
-
-          <div id="featureList" class="flex flex-wrap gap-2 mb-6"></div>
-
-          <div class="prose prose-sm text-slate-600 mb-6">
-            <h3 class="font-semibold text-slate-800 mb-1">Description</h3>
-            <p id="listDesc" class="whitespace-pre-line"></p>
-          </div>
-
-          <div class="text-xs text-slate-400 border-t pt-4">
-             Listed on <span id="listDate"></span>
-          </div>
+          <input id="guestEmail" class="w-full mt-2 border rounded px-3 py-2 text-sm hidden" placeholder="Your email (required for guests)">
         </div>
-
-        <div id="favSection" class="hidden">
-           <button id="favBtn" class="w-full py-3 rounded-xl border-2 border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition flex justify-center gap-2 items-center">
-             <span>☆</span> Add to Favorites
-           </button>
-           <p id="favMsg" class="text-center text-xs mt-2 text-slate-500"></p>
-        </div>
-
-        <div class="bg-slate-800 p-6 rounded-2xl text-white shadow-lg">
-          <h3 class="font-bold text-lg mb-2">Interested?</h3>
-          <p class="text-slate-300 text-sm mb-4">Contact the landlord to ask questions or arrange a viewing.</p>
-          <button onclick="document.getElementById('chatSection').scrollIntoView({behavior: 'smooth'})" 
-            class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-bold text-white transition">
-            Message Landlord
-          </button>
-        </div>
-
       </div>
     </div>
-
-    <section id="chatSection" class="max-w-3xl mx-auto mt-12 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
-      
-      <div class="bg-slate-50 px-6 py-4 border-b flex justify-between items-center">
-        <div>
-           <h2 class="font-bold text-slate-800">Conversation</h2>
-           <p id="chatSub" class="text-xs text-slate-500">Secure messaging</p>
-        </div>
-        <button id="toggleHideBtn" class="text-xs text-amber-600 hover:text-amber-800 border border-amber-200 px-3 py-1 rounded-full hidden">
-           Archive Chat
-        </button>
-      </div>
-
-      <div id="messagesArea" class="h-80 overflow-y-auto p-6 flex flex-col gap-3 bg-white">
-        <div class="text-center text-slate-400 text-sm mt-10">No messages yet. Start the conversation!</div>
-      </div>
-
-      <div class="p-4 bg-slate-50 border-t">
-        <div class="flex flex-col gap-3">
-          <input id="guestEmailInput" type="email" placeholder="Your email address (required for reply)" 
-            class="hidden w-full px-4 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-          
-          <div class="flex gap-2">
-            <textarea id="messageInput" rows="1" placeholder="Type a message..." 
-              class="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"></textarea>
-            <button id="sendBtn" class="px-6 py-2 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-900 transition">
-              Send
-            </button>
-          </div>
-          <p id="chatStatus" class="text-xs text-center text-slate-500 h-4"></p>
-        </div>
-      </div>
-
-    </section>
-
   </div>
 
 <script>
-  // --- CONFIG ---
-  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-  // --- STATE ---
-  let listingId = null;
-  let currentUser = null;   // Auth User object
-  let userRole = null;      // 'landlord' | 'tenant' | null (guest)
-  let currentListing = null;
-
-  // Chat Context
-  let chatTenantId = null;     // ID of the tenant in the conversation
-  let chatTenantEmail = null;  // Email of the tenant (or guest email)
-  let isLandlordView = false;  // Are we viewing as the owner?
+  let listingId, currentUser, role, currentListing;
   
-  // --- DOM ---
-  const mainContent = document.getElementById('mainContent');
-  const loadingState = document.getElementById('loadingState');
-  
-  // Photo Elements
-  const mainPhoto = document.getElementById('mainPhoto');
-  const thumbnailsContainer = document.getElementById('thumbnailsContainer');
-  
-  // Info Elements
-  const listTitle = document.getElementById('listTitle');
-  const listCity = document.getElementById('listCity');
-  const listPrice = document.getElementById('listPrice');
-  const listDesc = document.getElementById('listDesc');
-  const listDate = document.getElementById('listDate');
-  const featureList = document.getElementById('featureList');
-
-  // Chat Elements
-  const chatSection = document.getElementById('chatSection');
-  const messagesArea = document.getElementById('messagesArea');
-  const messageInput = document.getElementById('messageInput');
-  const guestEmailInput = document.getElementById('guestEmailInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const chatStatus = document.getElementById('chatStatus');
-  const chatSub = document.getElementById('chatSub');
-
-  // Favorites
-  const favSection = document.getElementById('favSection');
-  const favBtn = document.getElementById('favBtn');
-  const favMsg = document.getElementById('favMsg');
-  let isFavorite = false;
-
-  // --- INIT ---
   window.addEventListener('load', async () => {
+    if(!window.sb) return;
     const params = new URLSearchParams(window.location.search);
     listingId = params.get('id');
+    if(!listingId) { alert("No ID"); return; }
 
-    if (!listingId) {
-      loadingState.textContent = "Error: No listing ID provided.";
-      return;
+    const {data:{user}} = await window.sb.auth.getUser();
+    currentUser = user;
+    if(currentUser) {
+       const prof = await getCurrentProfile();
+       role = prof?.role;
     }
 
-    // 1. Get User & Role
-    const { data: authData } = await supabase.auth.getUser();
-    currentUser = authData?.user || null;
-
-    if (currentUser) {
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
-      userRole = profile?.role;
-    }
-
-    // 2. Load Listing
     await loadListing();
-
-    // 3. Init Favorites (Tenant only)
-    if (userRole === 'tenant') {
-      initFavorites();
-    }
-
-    // 4. Init Chat
-    initChat(params);
+    await loadChat();
   });
 
-  // --- LISTING LOGIC ---
   async function loadListing() {
-    const { data, error } = await supabase
-      .from('listing')
-      .select('*')
-      .eq('id', listingId)
-      .single();
-
-    if (error || !data) {
-      loadingState.textContent = "Listing not found or inactive.";
-      return;
-    }
-
+    const { data } = await window.sb.from('listing').select('*').eq('id', listingId).single();
+    if(!data) return;
     currentListing = data;
-    renderListingUI(data);
-    loadingState.classList.add('hidden');
-    mainContent.classList.remove('hidden');
-  }
 
-  function renderListingUI(data) {
-    // Text Data
-    listTitle.textContent = data.title;
-    listCity.textContent = data.city;
-    listPrice.textContent = `$${data.price_per_month}`;
-    listDesc.textContent = data.description || "No description provided.";
-    listDate.textContent = new Date(data.created_at).toLocaleDateString();
-
-    // Features
-    featureList.innerHTML = '';
-    const flags = [
-      { key: 'has_wifi', label: 'Wi-Fi' },
-      { key: 'allow_pets', label: 'Pets Allowed' },
-      { key: 'is_furnished', label: 'Furnished' }
-    ];
-    flags.forEach(f => {
-      if (data[f.key]) {
-        const span = document.createElement('span');
-        span.className = "px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold";
-        span.textContent = f.label;
-        featureList.appendChild(span);
-      }
-    });
-
-    // --- PHOTOS LOGIC ---
-    const photos = [
-      data.main_photo_url,
-      data.photo2_url,
-      data.photo3_url,
-      data.photo4_url
-    ].filter(url => !!url); // remove nulls
-
-    if (photos.length > 0) {
-      // Set Initial Main Photo
-      mainPhoto.src = photos[0];
-      
-      // Generate Thumbnails
-      thumbnailsContainer.innerHTML = '';
-      photos.forEach((url) => {
-        const btn = document.createElement('button');
-        btn.className = "w-full h-24 rounded-xl overflow-hidden border-2 border-transparent hover:border-emerald-500 focus:border-emerald-500 transition";
-        btn.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
-        
-        // Click to swap
-        btn.onclick = () => {
-          mainPhoto.src = url;
-        };
-        thumbnailsContainer.appendChild(btn);
-      });
-    } else {
-      mainPhoto.classList.add('hidden');
-      document.getElementById('emptyPhotoPlaceholder').classList.remove('hidden');
-      thumbnailsContainer.innerHTML = '<p class="text-xs text-slate-400 col-span-4 text-center">No additional photos.</p>';
-    }
-  }
-
-  // --- FAVORITES LOGIC (Tenant) ---
-  async function initFavorites() {
-    favSection.classList.remove('hidden');
+    document.getElementById('listingContent').classList.remove('hidden');
+    document.getElementById('title').textContent = data.title;
+    document.getElementById('city').textContent = data.city;
+    document.getElementById('price').textContent = `$${data.price_per_month}/mo`;
+    document.getElementById('desc').textContent = data.description;
     
-    // Check Status
-    const { data } = await supabase
-      .from('favorites')
-      .select('id')
-      .eq('user_id', currentUser.id)
-      .eq('listing_id', listingId)
-      .maybeSingle();
-
-    isFavorite = !!data;
-    updateFavBtn();
-
-    favBtn.onclick = async () => {
-      favBtn.disabled = true;
-      if (isFavorite) {
-        // Remove
-        await supabase.from('favorites').delete().eq('user_id', currentUser.id).eq('listing_id', listingId);
-        isFavorite = false;
-        favMsg.textContent = "Removed from favorites";
-      } else {
-        // Add
-        await supabase.from('favorites').insert([{ listing_id: listingId }]); // user_id is auto from auth.uid() usually, or implicit via RLS if set up, but safer to let Supabase Auth handle it. 
-        // Note: If table requires explicit user_id in INSERT and doesn't default to auth.uid(), we need to pass it. Assuming default logic or explicit:
-        // Let's rely on RLS/Postgres defaults. If it fails, we might need user_id: currentUser.id
-        // Re-check system prompt: "favorites (id, user_id, listing_id)". 
-        // Let's explicitly pass user_id to be safe for this generic client.
-        // Actually, previous tenant.html used just listing_id. I will stick to that if RLS handles it, but adding user_id is safer client-side if no trigger exists.
-        // Let's assume the previous code worked. I'll add user_id explicitly just in case.
-        /* Correction: Previous code used just listing_id. I'll stick to that. */
-        await supabase.from('favorites').insert([{ listing_id: listingId }]); 
-        isFavorite = true;
-        favMsg.textContent = "Saved to favorites!";
-      }
-      updateFavBtn();
-      favBtn.disabled = false;
-    };
-  }
-
-  function updateFavBtn() {
-    if(isFavorite) {
-       favBtn.innerHTML = `<span>★</span> Saved`;
-       favBtn.classList.add('bg-emerald-50', 'border-emerald-600');
-    } else {
-       favBtn.innerHTML = `<span>☆</span> Add to Favorites`;
-       favBtn.classList.remove('bg-emerald-50');
+    // Images
+    const imgs = [data.main_photo_url, data.photo2_url, data.photo3_url, data.photo4_url].filter(Boolean);
+    if(imgs.length) {
+       document.getElementById('mainImg').src = imgs[0];
+       document.getElementById('thumbs').innerHTML = imgs.map(url => 
+         `<img src="${url}" class="h-16 w-full object-cover rounded cursor-pointer border hover:border-emerald-500" onclick="document.getElementById('mainImg').src='${url}'">`
+       ).join('');
     }
   }
 
   // --- CHAT LOGIC ---
+  async function loadChat() {
+    const box = document.getElementById('chatBox');
+    
+    // Логика "Чей это чат?"
+    let threadId = currentUser ? currentUser.id : null;
+    let threadEmail = currentUser ? currentUser.email : null;
+    
+    // Если смотрит Лендлорд
+    if(role === 'landlord' && currentListing.owner_id === currentUser.id) {
+       const urlId = new URLSearchParams(window.location.search).get('tenant_id');
+       const urlEmail = new URLSearchParams(window.location.search).get('tenant_email');
+       
+       if(!urlId && !urlEmail) {
+         box.innerHTML = '<p class="text-center text-slate-500 mt-10">This is your listing.<br>Check dashboard for messages.</p>';
+         document.getElementById('sendBtn').disabled = true;
+         return;
+       }
+       threadId = urlId;
+       threadEmail = urlEmail;
+    }
 
-  async function initChat(params) {
-    chatSection.classList.remove('hidden');
-
-    // 1. Determine Context
-    if (userRole === 'landlord' && currentListing.owner_id === currentUser.id) {
-      // LANDLORD VIEWING THEIR OWN LISTING
-      isLandlordView = true;
-      
-      // Landlord needs a specific tenant_id to talk to. 
-      // They usually come here from the Inbox (landlord.html) with ?tenant_id=...
-      const tId = params.get('tenant_id');
-      const tEmail = params.get('tenant_email');
-      
-      if (!tId && !tEmail) {
-        messagesArea.innerHTML = `
-          <div class="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
-            <p>This is your listing.</p>
-            <p class="text-sm">Go to your <a href="landlord.html" class="text-emerald-600 underline">Dashboard Inbox</a> to reply to messages.</p>
-          </div>`;
-        document.querySelector('#chatSection .bg-slate-50.border-t').classList.add('hidden'); // hide input
-        return;
-      }
-
-      chatTenantId = tId;
-      chatTenantEmail = tEmail;
-      chatSub.textContent = `Chatting with ${tEmail || 'Guest'}`;
-
-      // Mark as read immediately
-      await markMessagesAsRead('landlord');
-
-    } else if (userRole === 'tenant') {
-      // TENANT VIEW
-      isLandlordView = false;
-      chatTenantId = currentUser.id;
-      chatTenantEmail = currentUser.email;
-      chatSub.textContent = "Chat with Landlord";
-      
-      await markMessagesAsRead('tenant');
-
+    // Гость
+    if(!currentUser) {
+       document.getElementById('guestEmail').classList.remove('hidden');
+       box.innerHTML = '<p class="text-center text-slate-400 mt-2">Guests can send messages, but cannot see history here.</p>';
     } else {
-      // GUEST VIEW
-      isLandlordView = false;
-      chatTenantId = null; 
-      chatSub.textContent = "Ask a question as Guest";
-      guestEmailInput.classList.remove('hidden');
-      
-      // Guests don't see history usually (unless we stored a session, but let's keep it simple: Write-only or session-based).
-      // For this MVP: Guest can write, but maybe won't see history if they refresh.
-      // We will try to fetch messages by matching email if they type it? Too complex.
-      // Simple MVP: Guest sends message. History shows "Message sent".
+       // Загрузка истории
+       let q = window.sb.from('messages').select('*').eq('listing_id', listingId).order('created_at');
+       
+       if(threadId) q = q.eq('tenant_id', threadId);
+       else if(threadEmail) q = q.eq('tenant_email', threadEmail);
+       
+       const {data} = await q;
+       if(data) {
+         box.innerHTML = '';
+         data.forEach(m => {
+           const isMe = (role === 'landlord' && m.is_from_landlord) || (role !== 'landlord' && !m.is_from_landlord);
+           const div = document.createElement('div');
+           div.className = `p-2 rounded max-w-[80%] text-sm ${isMe ? 'bg-emerald-100 self-end ml-auto' : 'bg-white border self-start'}`;
+           div.textContent = m.message;
+           box.appendChild(div);
+         });
+         box.scrollTop = box.scrollHeight;
+       }
     }
 
-    // 2. Load Messages (if not guest)
-    if (currentUser) {
-      await loadMessages();
-      // subscribeToMessages(); // Optional: Realtime
-    }
+    // Отправка
+    document.getElementById('sendBtn').onclick = async () => {
+       const msg = document.getElementById('chatMsg').value;
+       if(!msg) return;
+       
+       const payload = {
+         listing_id: listingId,
+         message: msg,
+         is_from_landlord: role === 'landlord',
+         tenant_id: currentUser ? (role==='tenant'?currentUser.id : threadId) : null,
+         tenant_email: currentUser ? (role==='tenant'?currentUser.email : threadEmail) : document.getElementById('guestEmail').value
+       };
 
-    // 3. Send Handler
-    sendBtn.onclick = sendMessage;
-  }
-
-  async function loadMessages() {
-    let query = supabase
-      .from('messages')
-      .select('*')
-      .eq('listing_id', listingId)
-      .order('created_at', { ascending: true });
-
-    // Filter by the specific thread
-    if (chatTenantId) {
-      query = query.or(`tenant_id.eq.${chatTenantId},tenant_id.is.null`); 
-      // Note: "tenant_id.is.null" is for guests. If I am a tenant, I shouldn't see guest messages unless I wrote them? 
-      // Actually, if chatTenantId is set, we only want messages for THAT tenant.
-      // Guest messages have tenant_id = null.
-      // If I am a logged in tenant, I only see MY messages (tenant_id = myID).
-      query = query.eq('tenant_id', chatTenantId);
-    } else if (isLandlordView && chatTenantEmail) {
-       // Landlord viewing guest thread by email
-       query = query.eq('tenant_email', chatTenantEmail);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    renderMessages(data);
-  }
-
-  function renderMessages(messages) {
-    if (!messages || messages.length === 0) {
-      messagesArea.innerHTML = '<div class="text-center text-slate-400 text-sm mt-10">No messages yet. Say hello!</div>';
-      return;
-    }
-
-    messagesArea.innerHTML = '';
-    messages.forEach(msg => {
-      // Should we hide this message?
-      if (isLandlordView && msg.hidden_for_landlord) return;
-      if (!isLandlordView && msg.hidden_for_tenant) return;
-
-      const isMe = isLandlordView ? msg.is_from_landlord : !msg.is_from_landlord;
-      
-      const div = document.createElement('div');
-      div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
-      
-      div.innerHTML = `
-        <div class="max-w-[80%] rounded-xl px-4 py-2 text-sm ${
-          isMe 
-            ? 'bg-emerald-600 text-white rounded-br-none' 
-            : 'bg-slate-100 text-slate-800 rounded-bl-none'
-        }">
-          <p>${msg.message}</p>
-          <p class="text-[10px] opacity-70 text-right mt-1">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-        </div>
-      `;
-      messagesArea.appendChild(div);
-    });
-
-    // Scroll to bottom
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    // Guest validation
-    let email = chatTenantEmail;
-    if (!currentUser) {
-      email = guestEmailInput.value.trim();
-      if (!email) {
-        chatStatus.textContent = "Please enter your email so the landlord can reply.";
-        chatStatus.classList.add('text-red-500');
-        return;
-      }
-    }
-
-    sendBtn.disabled = true;
-    chatStatus.textContent = "Sending...";
-    chatStatus.className = "text-xs text-center text-slate-500 h-4";
-
-    const payload = {
-      listing_id: listingId,
-      tenant_id: currentUser ? currentUser.id : null,
-      tenant_email: email,
-      message: text,
-      is_from_landlord: isLandlordView,
-      // Read status: if I send it, I read it. The other party hasn't.
-      is_read_by_landlord: isLandlordView,
-      is_read_by_tenant: !isLandlordView
-    };
-
-    const { error } = await supabase.from('messages').insert([payload]);
-
-    if (error) {
-      chatStatus.textContent = "Error sending: " + error.message;
-      chatStatus.classList.add('text-red-500');
-    } else {
-      messageInput.value = '';
-      chatStatus.textContent = "Message sent!";
-      chatStatus.classList.add('text-emerald-600');
-      
-      // If we are logged in, refresh chat. If guest, just show confirmation.
-      if (currentUser) {
-        await loadMessages();
-      } else {
-        // Guest visual feedback
-        const div = document.createElement('div');
-        div.className = `flex w-full justify-end`;
-        div.innerHTML = `<div class="max-w-[80%] rounded-xl px-4 py-2 text-sm bg-emerald-600 text-white rounded-br-none"><p>${text}</p></div>`;
-        messagesArea.appendChild(div);
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-        
-        // Hide email input after first send to look cleaner
-        guestEmailInput.classList.add('hidden');
-      }
-    }
-    sendBtn.disabled = false;
-  }
-
-  async function markMessagesAsRead(viewer) {
-    // Only update if there are unread messages for me
-    // This requires a targeted UPDATE query.
-    // "UPDATE messages SET is_read_by_landlord = true WHERE listing_id = X AND tenant_id = Y AND is_read_by_landlord = false"
-    
-    // Simplification for MVP: We won't do a heavy update on every load to save requests, 
-    // or we do it blindly. Let's do it safely.
-    
-    const field = viewer === 'landlord' ? 'is_read_by_landlord' : 'is_read_by_tenant';
-    
-    // We only update messages NOT from us.
-    const notFromMe = viewer === 'landlord' ? false : true; // if viewer=landlord, we update msgs where is_from_landlord=false
-
-    // We can't easily do "update where X" with standard client without logic.
-    // But we can filter.
-    // For now, let's skip automatic "Mark as read" logic to keep code simple and reliable, 
-    // or assume the user sees the bold indicator in inbox and clicking it is enough (in Inbox page).
-    // In details page, we can assume "Seen".
-    
-    if (viewer === 'landlord' && chatTenantId) {
-        await supabase.from('messages').update({ is_read_by_landlord: true })
-        .eq('listing_id', listingId)
-        .eq('tenant_id', chatTenantId)
-        .eq('is_from_landlord', false)
-        .eq('is_read_by_landlord', false);
-    } 
-    else if (viewer === 'tenant') {
-        await supabase.from('messages').update({ is_read_by_tenant: true })
-        .eq('listing_id', listingId)
-        .eq('tenant_id', currentUser.id)
-        .eq('is_from_landlord', true)
-        .eq('is_read_by_tenant', false);
+       if(!payload.tenant_email) { alert("Email required for guest"); return; }
+       
+       await window.sb.from('messages').insert(payload);
+       document.getElementById('chatMsg').value = '';
+       if(currentUser) loadChat(); 
+       else alert('Message sent!');
     }
   }
-
 </script>
 </body>
 </html>
