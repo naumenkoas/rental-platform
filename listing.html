@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Public listings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto py-8 px-4">
+    <header class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-slate-800">Browse rentals</h1>
+      <div class="flex gap-2">
+        <a href="index.html"
+           class="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 text-sm font-semibold hover:bg-slate-50 transition">
+          Sign in
+        </a>
+        <a href="register.html"
+           class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+          Sign up
+        </a>
+      </div>
+    </header>
+
+    <section class="mb-4 text-sm text-slate-600">
+      <p>Public page: you can search and open listings without an account.  
+      To start a full chat with landlords you’ll be asked to sign up as a tenant.</p>
+    </section>
+
+    <!-- ФИЛЬТРЫ -->
+    <section class="mb-6 bg-white rounded-2xl shadow p-5">
+      <h2 class="text-lg font-semibold mb-3">Search filters</h2>
+      <div class="grid md:grid-cols-4 gap-3 mb-3 text-sm">
+        <input id="filterCity" type="text" placeholder="City"
+          class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="filterMinPrice" type="number" placeholder="Min price"
+          class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="filterMaxPrice" type="number" placeholder="Max price"
+          class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <label class="flex items-center gap-1 text-sm text-slate-700">
+          <input id="filterActive" type="checkbox" class="rounded border-slate-300" checked />
+          <span>Only active</span>
+        </label>
+      </div>
+      <div class="flex flex-wrap gap-3 text-sm mb-3">
+        <label class="inline-flex items-center gap-1">
+          <input id="filterWifi" type="checkbox" class="rounded border-slate-300" />
+          <span>Wi-Fi</span>
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input id="filterPets" type="checkbox" class="rounded border-slate-300" />
+          <span>Pets allowed</span>
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input id="filterFurnished" type="checkbox" class="rounded border-slate-300" />
+          <span>Furnished</span>
+        </label>
+      </div>
+      <div class="flex gap-3">
+        <button id="applyFiltersBtn"
+          class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+          Apply filters
+        </button>
+        <button id="resetFiltersBtn"
+          class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <!-- СПИСОК ОБЪЯВЛЕНИЙ -->
+    <section class="bg-white rounded-2xl shadow p-5">
+      <h2 class="text-lg font-semibold mb-3">Listings</h2>
+      <div id="listingsContainer" class="grid md:grid-cols-3 gap-4 text-sm text-slate-700">
+        Loading...
+      </div>
+    </section>
+  </div>
+
+<script>
+  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  window.addEventListener("load", () => {
+    document
+      .getElementById("applyFiltersBtn")
+      .addEventListener("click", loadListings);
+    document
+      .getElementById("resetFiltersBtn")
+      .addEventListener("click", resetFilters);
+
+    loadListings();
+  });
+
+  function resetFilters() {
+    document.getElementById("filterCity").value = "";
+    document.getElementById("filterMinPrice").value = "";
+    document.getElementById("filterMaxPrice").value = "";
+    document.getElementById("filterActive").checked = true;
+    document.getElementById("filterWifi").checked = false;
+    document.getElementById("filterPets").checked = false;
+    document.getElementById("filterFurnished").checked = false;
+    loadListings();
+  }
+
+  async function loadListings() {
+    const container = document.getElementById("listingsContainer");
+    container.textContent = "Loading...";
+
+    let query = supabase.from("listing").select("*").order("created_at", { ascending: false });
+
+    const city = document.getElementById("filterCity").value.trim();
+    const minPrice = document.getElementById("filterMinPrice").value;
+    const maxPrice = document.getElementById("filterMaxPrice").value;
+    const onlyActive = document.getElementById("filterActive").checked;
+    const wifi = document.getElementById("filterWifi").checked;
+    const pets = document.getElementById("filterPets").checked;
+    const furnished = document.getElementById("filterFurnished").checked;
+
+    if (city) {
+      query = query.ilike("city", `%${city}%`);
+    }
+    if (minPrice) {
+      query = query.gte("price_per_month", parseInt(minPrice, 10));
+    }
+    if (maxPrice) {
+      query = query.lte("price_per_month", parseInt(maxPrice, 10));
+    }
+    if (onlyActive) {
+      query = query.eq("is_active", true);
+    }
+    if (wifi) {
+      query = query.eq("has_wifi", true);
+    }
+    if (pets) {
+      query = query.eq("allow_pets", true);
+    }
+    if (furnished) {
+      query = query.eq("is_furnished", true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("loadListings error", error);
+      container.textContent = error.message || "Error loading listings.";
+      return;
+    }
+
+    if (!data || !data.length) {
+      container.textContent = "No listings match your filters.";
+      return;
+    }
+
+    container.innerHTML = "";
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.className =
+        "border rounded-2xl p-3 flex flex-col gap-2 hover:bg-slate-50 transition";
+
+      const img = document.createElement("img");
+      img.src = item.main_photo_url || "https://via.placeholder.com/160";
+      img.alt = item.title || "listing photo";
+      img.className = "w-full h-32 object-cover rounded-xl bg-slate-200";
+
+      const title = document.createElement("div");
+      title.className = "font-semibold text-sm";
+      title.textContent = item.title || "(no title)";
+
+      const city = document.createElement("div");
+      city.className = "text-xs text-slate-500";
+      city.textContent = item.city || "";
+
+      const price = document.createElement("div");
+      price.className = "text-sm font-semibold text-emerald-700";
+      price.textContent =
+        item.price_per_month != null ? item.price_per_month + " / month" : "";
+
+      const flags = [];
+      if (item.has_wifi) flags.push("Wi-Fi");
+      if (item.allow_pets) flags.push("Pets");
+      if (item.is_furnished) flags.push("Furnished");
+      if (item.is_active === false) flags.push("Inactive");
+      const flagLine = document.createElement("div");
+      flagLine.className = "text-[11px] text-slate-500";
+      flagLine.textContent = flags.join(" • ");
+
+      const btnRow = document.createElement("div");
+      btnRow.className = "flex gap-2 mt-1";
+
+      const viewBtn = document.createElement("button");
+      viewBtn.className =
+        "flex-1 px-3 py-1 rounded-full border border-slate-300 text-slate-700 text-xs hover:bg-slate-100";
+      viewBtn.textContent = "View details";
+      viewBtn.addEventListener("click", () => {
+        window.location.href = `listing-details.html?id=${item.id}`;
+      });
+
+      const contactBtn = document.createElement("button");
+      contactBtn.className =
+        "flex-1 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs hover:bg-emerald-700";
+      contactBtn.textContent = "Open dialog";
+      contactBtn.addEventListener("click", () => {
+        window.location.href = `listing-details.html?id=${item.id}`;
+      });
+
+      btnRow.appendChild(viewBtn);
+      btnRow.appendChild(contactBtn);
+
+      card.appendChild(img);
+      card.appendChild(title);
+      card.appendChild(city);
+      card.appendChild(price);
+      card.appendChild(flagLine);
+      card.appendChild(btnRow);
+
+      container.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>
