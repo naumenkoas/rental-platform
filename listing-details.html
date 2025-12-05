@@ -27,6 +27,13 @@
         <p id="city" class="text-slate-700"></p>
         <p id="price" class="text-lg font-semibold text-emerald-700 mt-2"></p>
         <p id="flags" class="text-sm text-slate-600 mt-1"></p>
+
+        <!-- КНОПКА ИЗБРАННОГО ДЛЯ TENANT -->
+        <button id="favBtn"
+          class="mt-3 px-3 py-1 rounded-xl border border-emerald-600 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 hidden">
+          ☆ Add to favorites
+        </button>
+        <p id="favStatus" class="text-xs text-slate-500 mt-1"></p>
       </div>
 
       <div>
@@ -125,6 +132,9 @@
   const guestSendBtn = document.getElementById("guestSendBtn");
   const guestStatusEl = document.getElementById("guestStatus");
 
+  const favBtnEl = document.getElementById("favBtn");
+  const favStatusEl = document.getElementById("favStatus");
+
   let currentUser = null;
   let currentProfile = null;
   let currentListing = null;
@@ -133,6 +143,9 @@
   let threadTenantEmail = null;
 
   let currentRoleForChat = null; // "landlord" | "tenant"
+
+  // состояние избранного для текущего объявления
+  let isFavorite = false;
 
   function setStatus(text, isError = false) {
     statusEl.textContent = text;
@@ -150,6 +163,22 @@
     guestStatusEl.textContent = text || "";
     guestStatusEl.className =
       "text-xs " + (isError ? "text-red-600" : "text-slate-500");
+  }
+
+  function setFavStatus(text, isError = false) {
+    favStatusEl.textContent = text || "";
+    favStatusEl.className =
+      "text-xs mt-1 " + (isError ? "text-red-600" : "text-slate-500");
+  }
+
+  function updateFavButtonUI() {
+    if (!favBtnEl) return;
+    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
+      favBtnEl.classList.add("hidden");
+      return;
+    }
+    favBtnEl.classList.remove("hidden");
+    favBtnEl.textContent = isFavorite ? "★ In favorites" : "☆ Add to favorites";
   }
 
   window.addEventListener("load", () => {
@@ -205,9 +234,12 @@
 
     if (currentListing.is_active === false) {
       setStatus("This listing is inactive.", false);
+      contentEl.classList.remove("hidden");
       chatSectionEl.classList.remove("hidden");
       chatMessagesEl.textContent = "Messaging is disabled for inactive listings.";
       document.getElementById("chatFooter").classList.add("hidden");
+      // избранное для неактивного тоже можно, но не принципиально
+      await initFavoritesForTenant(listingId);
       return;
     }
 
@@ -220,6 +252,8 @@
       contentEl.classList.remove("hidden");
       guestSectionEl.classList.remove("hidden");
       setupGuestForm(listingId);
+      // гость не видит избранное
+      updateFavButtonUI();
       return;
     }
 
@@ -227,6 +261,9 @@
     if (isLandlord) {
       setStatus("", false);
       contentEl.classList.remove("hidden");
+
+      // избранное для лендлорда сейчас не делаем
+      updateFavButtonUI();
 
       if (!tenantIdFromUrl && !tenantEmailFromUrl) {
         chatSectionEl.classList.remove("hidden");
@@ -277,6 +314,9 @@
       toggleHideBtn.addEventListener("click", toggleHideConversationForTenant);
       sendBtnEl.addEventListener("click", () => sendMessageAsTenant(listingId));
 
+      // инициализация избранного для tenant
+      await initFavoritesForTenant(listingId);
+
       await loadMessagesForThread(listingId, "tenant");
       return;
     }
@@ -288,6 +328,8 @@
     chatMessagesEl.textContent =
       "Messaging is available only for landlords and tenants.";
     document.getElementById("chatFooter").classList.add("hidden");
+
+    updateFavButtonUI();
   }
 
   function fillListing(data) {
@@ -347,6 +389,93 @@
     contentEl.classList.remove("hidden");
   }
 
+  // --------- ИЗБРАННОЕ ДЛЯ TENANT ---------
+
+  async function initFavoritesForTenant(listingId) {
+    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
+      updateFavButtonUI();
+      return;
+    }
+
+    // обработчик кнопки
+    if (favBtnEl) {
+      favBtnEl.onclick = () => toggleFavorite(listingId);
+    }
+
+    await loadFavoriteState(listingId);
+  }
+
+  async function loadFavoriteState(listingId) {
+    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
+      isFavorite = false;
+      updateFavButtonUI();
+      return;
+    }
+
+    setFavStatus("Checking favorites...");
+    const { data, error } = await supabase
+      .from("favorites")
+      .select("id")
+      .eq("user_id", currentUser.id)
+      .eq("listing_id", listingId)
+      .maybeSingle();
+
+    if (error) {
+      // типичная ошибка на 0 строк у maybeSingle в v2 — это не ошибка, но на всякий пожарный логируем
+      console.error("loadFavoriteState error", error);
+      setFavStatus("Failed to check favorites.", true);
+      isFavorite = false;
+    } else {
+      isFavorite = !!data;
+      setFavStatus(isFavorite ? "This listing is in your favorites." : "");
+    }
+
+    updateFavButtonUI();
+  }
+
+  async function toggleFavorite(listingId) {
+    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
+      setFavStatus("Only logged-in tenants can use favorites.", true);
+      return;
+    }
+
+    if (!isFavorite) {
+      // Добавляем в избранное
+      setFavStatus("Adding to favorites...");
+      const { error } = await supabase
+        .from("favorites")
+        .insert([{ listing_id: listingId }]); // user_id подставит default auth.uid()
+
+      if (error) {
+        console.error("toggleFavorite insert error", error);
+        setFavStatus(error.message || "Failed to add to favorites.", true);
+        return;
+      }
+
+      isFavorite = true;
+      setFavStatus("Added to favorites.");
+      updateFavButtonUI();
+    } else {
+      // Убираем из избранного
+      setFavStatus("Removing from favorites...");
+      const { error } = await supabase
+        .from("favorites")
+        .delete()
+        .eq("user_id", currentUser.id)
+        .eq("listing_id", listingId);
+
+      if (error) {
+        console.error("toggleFavorite delete error", error);
+        setFavStatus(error.message || "Failed to remove from favorites.", true);
+        return;
+      }
+
+      isFavorite = false;
+      setFavStatus("Removed from favorites.");
+      updateFavButtonUI();
+    }
+  }
+
   // --------- ГОСТЕВОЕ СООБЩЕНИЕ ---------
 
   function setupGuestForm(listingId) {
@@ -366,362 +495,3 @@
         {
           listing_id: listingId,
           tenant_id: null,
-          tenant_email: email,
-          message: msg,
-          is_from_landlord: false,
-          is_read_by_landlord: false,
-          is_read_by_tenant: false,
-          hidden_for_landlord: false,
-          hidden_for_tenant: false
-        }
-      ]);
-
-      if (error) {
-        console.error("guest send error", error);
-        setGuestStatus(error.message || "Failed to send message.", true);
-        return;
-      }
-
-      guestMessageEl.value = "";
-      setGuestStatus("Message sent.");
-    });
-  }
-
-  // --------- ЗАГРУЗКА СООБЩЕНИЙ ДЛЯ ТРЕДА ---------
-
-  async function loadMessagesForThread(listingId, role) {
-    if (!listingId) return;
-    if (!threadTenantId && !threadTenantEmail) {
-      chatMessagesEl.textContent = "No conversation selected.";
-      return;
-    }
-
-    chatMessagesEl.textContent = "Loading messages...";
-
-    let query = supabase
-      .from("messages")
-      .select("*")
-      .eq("listing_id", listingId)
-      .order("created_at", { ascending: true });
-
-    // не фильтруем hidden_* специально, чтобы можно было вернуть скрытый диалог
-    if (role === "landlord") {
-      if (threadTenantId) {
-        query = query.eq("tenant_id", threadTenantId);
-      } else if (threadTenantEmail) {
-        query = query.eq("tenant_email", threadTenantEmail);
-      }
-    } else if (role === "tenant") {
-      query = query.eq("tenant_id", threadTenantId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("loadMessagesForThread error", error);
-      chatMessagesEl.textContent = error.message || "Error loading messages.";
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      chatMessagesEl.textContent = "No messages yet. Start the conversation.";
-      toggleHideBtn.textContent = "Hide conversation";
-      return;
-    }
-
-    const allHiddenForLandlord =
-      role === "landlord" && data.every(m => m.hidden_for_landlord);
-    const allHiddenForTenant =
-      role === "tenant" && data.every(m => m.hidden_for_tenant);
-
-    const isHiddenForRole =
-      (role === "landlord" && allHiddenForLandlord) ||
-      (role === "tenant" && allHiddenForTenant);
-
-    // помечаем прочитанными
-    const idsToMark = [];
-    if (role === "landlord") {
-      data.forEach(msg => {
-        if (!msg.is_from_landlord && !msg.is_read_by_landlord) {
-          idsToMark.push(msg.id);
-        }
-      });
-      if (idsToMark.length) {
-        await supabase
-          .from("messages")
-          .update({ is_read_by_landlord: true })
-          .in("id", idsToMark);
-      }
-    } else if (role === "tenant") {
-      data.forEach(msg => {
-        if (msg.is_from_landlord && !msg.is_read_by_tenant) {
-          idsToMark.push(msg.id);
-        }
-      });
-      if (idsToMark.length) {
-        await supabase
-          .from("messages")
-          .update({ is_read_by_tenant: true })
-          .in("id", idsToMark);
-      }
-    }
-
-    if (isHiddenForRole) {
-      chatMessagesEl.innerHTML =
-        '<p class="text-xs text-slate-500">Conversation is hidden. Click “Show conversation” to see messages again.</p>';
-      toggleHideBtn.textContent = "Show conversation";
-      return;
-    }
-
-    toggleHideBtn.textContent = "Hide conversation";
-
-    // отрисуем только НЕ скрытые сообщения
-    const filtered = data.filter(msg =>
-      role === "landlord" ? !msg.hidden_for_landlord : !msg.hidden_for_tenant
-    );
-
-    if (!filtered.length) {
-      chatMessagesEl.textContent =
-        "No visible messages. Conversation might be partially hidden.";
-      return;
-    }
-
-    chatMessagesEl.innerHTML = "";
-
-    filtered.forEach(msg => {
-      const wrapper = document.createElement("div");
-      const mine =
-        (role === "landlord" && msg.is_from_landlord) ||
-        (role === "tenant" && !msg.is_from_landlord);
-
-      wrapper.className =
-        "mb-2 flex " + (mine ? "justify-end" : "justify-start");
-
-      const bubble = document.createElement("div");
-      bubble.className =
-        "max-w-[70%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line " +
-        (mine
-          ? "bg-emerald-600 text-white rounded-br-sm"
-          : "bg-white text-slate-800 border rounded-bl-sm");
-
-      const time = new Date(msg.created_at).toLocaleString();
-      const meta = mine
-        ? (role === "landlord" ? "You (landlord)" : "You")
-        : (role === "landlord" ? "Tenant" : "Landlord");
-
-      let deleteBtnHtml = "";
-      const canDelete =
-        (role === "landlord" && msg.is_from_landlord && !msg.is_read_by_tenant) ||
-        (role === "tenant" && !msg.is_from_landlord && !msg.is_read_by_landlord);
-
-      if (canDelete) {
-        deleteBtnHtml =
-          `<button data-id="${msg.id}" class="ml-2 text-[10px] text-red-200 underline decoration-dotted hover:text-red-100">
-             delete
-           </button>`;
-      }
-
-      bubble.innerHTML = `
-        <div class="text-[10px] mb-1 opacity-75 flex items-center">
-          <span>${meta} • ${time}</span>
-          ${deleteBtnHtml}
-        </div>
-        <div>${msg.message || ""}</div>
-      `;
-
-      wrapper.appendChild(bubble);
-      chatMessagesEl.appendChild(wrapper);
-
-      if (canDelete) {
-        bubble
-          .querySelector("button[data-id]")
-          .addEventListener("click", () => deleteMessage(msg.id));
-      }
-    });
-
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  }
-
-  async function deleteMessage(messageId) {
-    if (!confirm("Delete this message? It is allowed only while it is unread by the other side.")) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("messages")
-      .delete()
-      .eq("id", messageId);
-
-    if (error) {
-      console.error("deleteMessage error", error);
-      alert(error.message || "Failed to delete message.");
-      return;
-    }
-
-    await loadMessagesForThread(currentListing.id, currentRoleForChat);
-  }
-
-  // --------- ОТПРАВКА ---------
-
-  async function sendMessageAsTenant(listingId) {
-    const text = chatInputEl.value.trim();
-    if (!text) {
-      setChatStatus("Message is empty.", true);
-      return;
-    }
-
-    setChatStatus("Sending...");
-
-    const { error } = await supabase.from("messages").insert([
-      {
-        listing_id: listingId,
-        tenant_id: threadTenantId,
-        tenant_email: threadTenantEmail,
-        message: text,
-        is_from_landlord: false,
-        is_read_by_landlord: false,
-        is_read_by_tenant: false,
-        hidden_for_landlord: false,
-        hidden_for_tenant: false
-      }
-    ]);
-
-    if (error) {
-      console.error("sendMessageAsTenant error", error);
-      setChatStatus(error.message || "Failed to send.", true);
-      return;
-    }
-
-    chatInputEl.value = "";
-    setChatStatus("Message sent.");
-    await loadMessagesForThread(listingId, "tenant");
-  }
-
-  async function sendMessageAsLandlord(listingId) {
-    const text = chatInputEl.value.trim();
-    if (!text) {
-      setChatStatus("Message is empty.", true);
-      return;
-    }
-
-    setChatStatus("Sending...");
-
-    const { error } = await supabase.from("messages").insert([
-      {
-        listing_id: listingId,
-        tenant_id: threadTenantId,
-        tenant_email: threadTenantEmail,
-        message: text,
-        is_from_landlord: true,
-        is_read_by_landlord: true,
-        is_read_by_tenant: false,
-        hidden_for_landlord: false,
-        hidden_for_tenant: false
-      }
-    ]);
-
-    if (error) {
-      console.error("sendMessageAsLandlord error", error);
-      setChatStatus(error.message || "Failed to send.", true);
-      return;
-    }
-
-    chatInputEl.value = "";
-    setChatStatus("Message sent.");
-    await loadMessagesForThread(listingId, "landlord");
-  }
-
-  // --------- СКРЫТИЕ / ПОКАЗ ДИАЛОГА ---------
-
-  async function toggleHideConversationForTenant() {
-    if (!threadTenantId) return;
-
-    // смотрим, сейчас скрыто или нет
-    const { data, error } = await supabase
-      .from("messages")
-      .select("id, hidden_for_tenant")
-      .eq("listing_id", currentListing.id)
-      .eq("tenant_id", threadTenantId);
-
-    if (error) {
-      console.error("check hide tenant error", error);
-      alert(error.message || "Failed to check conversation state.");
-      return;
-    }
-
-    const allHidden = data && data.length && data.every(m => m.hidden_for_tenant);
-    const newHidden = !allHidden;
-
-    const confirmText = newHidden
-      ? "Hide this conversation for you?"
-      : "Show this conversation again?";
-    if (!confirm(confirmText)) return;
-
-    const { error: updErr } = await supabase
-      .from("messages")
-      .update({ hidden_for_tenant: newHidden })
-      .eq("listing_id", currentListing.id)
-      .eq("tenant_id", threadTenantId);
-
-    if (updErr) {
-      console.error("hideConversationForTenant error", updErr);
-      alert(updErr.message || "Failed to update conversation visibility.");
-      return;
-    }
-
-    await loadMessagesForThread(currentListing.id, "tenant");
-  }
-
-  async function toggleHideConversationForLandlord() {
-    if (!threadTenantId && !threadTenantEmail) return;
-
-    const filters = supabase
-      .from("messages")
-      .select("id, hidden_for_landlord")
-      .eq("listing_id", currentListing.id);
-
-    let query = filters;
-    if (threadTenantId) {
-      query = query.eq("tenant_id", threadTenantId);
-    } else if (threadTenantEmail) {
-      query = query.eq("tenant_email", threadTenantEmail);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error("check hide landlord error", error);
-      alert(error.message || "Failed to check conversation state.");
-      return;
-    }
-
-    const allHidden = data && data.length && data.every(m => m.hidden_for_landlord);
-    const newHidden = !allHidden;
-
-    const confirmText = newHidden
-      ? "Hide this conversation from your view?"
-      : "Show this conversation again?";
-    if (!confirm(confirmText)) return;
-
-    let upd = supabase
-      .from("messages")
-      .update({ hidden_for_landlord: newHidden })
-      .eq("listing_id", currentListing.id);
-
-    if (threadTenantId) {
-      upd = upd.eq("tenant_id", threadTenantId);
-    } else if (threadTenantEmail) {
-      upd = upd.eq("tenant_email", threadTenantEmail);
-    }
-
-    const { error: updErr } = await upd;
-    if (updErr) {
-      console.error("hideConversationForLandlord error", updErr);
-      alert(updErr.message || "Failed to update conversation visibility.");
-      return;
-    }
-
-    await loadMessagesForThread(currentListing.id, "landlord");
-  }
-</script>
-</body>
-</html>
