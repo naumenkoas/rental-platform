@@ -1,16 +1,22 @@
 // supabase.js
-// Общая инициализация клиента Supabase v2 + базовые хелперы
+// Единая точка входа. Инициализирует window.sb
 
 const SUPABASE_URL = "https://zzkriumjamchjrxdxhzf.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
 
-// ВАЖНО: берём глобальный window.supabase, а не самих себя
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Проверяем, загрузилась ли библиотека
+if (typeof window.supabase === 'undefined') {
+  console.error("Supabase library not loaded! Check your <head> tags.");
+} else {
+  // Создаем глобальный клиент 'sb' (коротко и ясно, чтобы не путать с библиотекой)
+  window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log("Supabase Client initialized as window.sb");
+}
 
-// Хелпер: редирект, если не залогинен
+// --- ОБЩИЕ ФУНКЦИИ ---
+
 async function requireAuth(redirectTo = "index.html") {
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await window.sb.auth.getUser();
   if (error || !data || !data.user) {
     window.location.href = redirectTo;
     return null;
@@ -18,32 +24,20 @@ async function requireAuth(redirectTo = "index.html") {
   return data.user;
 }
 
-// Хелпер: получить профиль текущего пользователя (profiles.id = auth.users.id)
 async function getCurrentProfile() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data || !data.user) return null;
-  const user = data.user;
+  const { data: { user } } = await window.sb.auth.getUser();
+  if (!user) return null;
 
-  const { data: profile, error: pErr } = await supabase
+  const { data: profile } = await window.sb
     .from("profiles")
     .select("*")
-    .eq("id", user.id) // id → auth.users.id
+    .eq("id", user.id)
     .maybeSingle();
-
-  if (pErr) {
-    console.error("getCurrentProfile error:", pErr);
-    return null;
-  }
+  
   return profile;
 }
 
-// Хелпер: логаут с опциональным редиректом
 async function logout(redirectTo = "index.html") {
-  try {
-    await supabase.auth.signOut();
-  } catch (e) {
-    console.error("logout error", e);
-  } finally {
-    window.location.href = redirectTo;
-  }
+  await window.sb.auth.signOut();
+  window.location.href = redirectTo;
 }
