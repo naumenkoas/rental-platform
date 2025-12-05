@@ -5,6 +5,7 @@
   <title>Landlord Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
   <div class="max-w-6xl mx-auto py-8 px-4">
@@ -179,11 +180,6 @@
   </div>
 
 <script>
-  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
   let currentUser = null;
   let editingListingId = null;
   let editingPhotos = [null, null, null, null]; // для edit
@@ -202,11 +198,38 @@
     return "img-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
   }
 
+  // Вытаскиваем путь внутри bucket'а из public URL
+  function extractStoragePathFromPublicUrl(publicUrl) {
+    try {
+      const url = new URL(publicUrl);
+      const marker = "/storage/v1/object/public/listing-photos/";
+      const idx = url.pathname.indexOf(marker);
+      if (idx === -1) return null;
+      return url.pathname.substring(idx + marker.length);
+    } catch (e) {
+      console.error("extractStoragePath error", e);
+      return null;
+    }
+  }
+
+  async function removePhotoFromStorage(publicUrl) {
+    const path = extractStoragePathFromPublicUrl(publicUrl);
+    if (!path) return;
+    const { error } = await supabase
+      .storage
+      .from("listing-photos")
+      .remove([path]);
+    if (error) {
+      console.error("Storage remove error", error);
+    }
+  }
+
   window.addEventListener("load", () => {
     init();
   });
 
   async function init() {
+    // Проверка auth + роль
     const { data, error } = await supabase.auth.getUser();
     if (error || !data || !data.user) {
       window.location.href = "index.html";
@@ -231,8 +254,7 @@
 
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       document.getElementById("logoutBtn").textContent = "Logging out...";
-      await supabase.auth.signOut();
-      window.location.href = "index.html";
+      await logout("index.html");
     });
 
     document.getElementById("createBtn")
@@ -301,7 +323,6 @@
       return;
     }
 
-    // сгруппируем по (listing_id + tenantId/Email)
     const threadsMap = new Map();
 
     data.forEach(msg => {
@@ -779,8 +800,8 @@
         if (!file) return;
         try {
           setStatus("Uploading photo...");
-          const url = await uploadSinglePhoto(file);
-          editingPhotos[index] = url;
+          const newUrl = await uploadSinglePhoto(file);
+          editingPhotos[index] = newUrl;
           renderEditPhotos();
           setStatus("Photo updated.");
         } catch (e) {
@@ -789,10 +810,19 @@
         }
       });
 
-      removeBtn.addEventListener("click", () => {
+      removeBtn.addEventListener("click", async () => {
         if (!confirm("Remove this photo from listing?")) return;
+        const oldUrl = editingPhotos[index];
         editingPhotos[index] = null;
         renderEditPhotos();
+        if (oldUrl) {
+          try {
+            await removePhotoFromStorage(oldUrl);
+          } catch (e) {
+            console.error("removePhotoFromStorage error", e);
+            setStatus("Failed to delete photo from storage.", true);
+          }
+        }
       });
 
       btnRow.appendChild(replaceBtn);
@@ -871,6 +901,22 @@
       )
     ) {
       return;
+    }
+
+    // Почистим фотки из Storage по возможности
+    const urls = [
+      item.main_photo_url,
+      item.photo2_url,
+      item.photo3_url,
+      item.photo4_url,
+    ].filter(Boolean);
+
+    for (const url of urls) {
+      try {
+        await removePhotoFromStorage(url);
+      } catch (e) {
+        console.error("removePhotoFromStorage on delete error", e);
+      }
     }
 
     const { error } = await supabase
