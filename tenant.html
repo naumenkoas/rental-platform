@@ -1,489 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Find your home</title>
+  <meta charset="UTF-8">
+  <title>Tenant Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-  <div class="max-w-6xl mx-auto py-8 px-4">
-    <header class="flex justify-between items-center mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-slate-800">Find your home</h1>
-        <p id="welcomeUser" class="text-slate-500 text-sm">Welcome</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <a id="dashboardBtn"
-           href="landlord.html"
-           class="hidden px-4 py-2 text-sm text-emerald-600 font-semibold hover:underline">
-          Go to Dashboard
-        </a>
-        <button id="logoutBtn"
-          class="px-4 py-2 rounded-xl bg-slate-800 text-white font-semibold hover:bg-slate-900 transition">
-          Log out
-        </button>
-      </div>
-    </header>
 
-    <div class="grid md:grid-cols-4 gap-6">
-      <aside class="space-y-4">
-        <div class="bg-white p-5 rounded-2xl shadow h-fit">
-          <h2 class="font-semibold text-lg mb-4 flex justify-between items-center">
-            <span>Filters</span>
-            <button id="resetFilters" class="text-xs text-emerald-600 font-normal">Reset</button>
-          </h2>
-          <div class="space-y-4">
-            <div>
-              <label class="text-xs font-bold text-slate-500 uppercase">City</label>
-              <input id="filterCity" type="text" placeholder="New York"
-                     class="w-full px-3 py-2 border rounded-xl text-sm mt-1" />
-            </div>
-            <div>
-               <label class="text-xs font-bold text-slate-500 uppercase">Max Price</label>
-               <input id="filterMaxPrice" type="number" placeholder="Any"
-                      class="w-full px-3 py-2 border rounded-xl text-sm mt-1" />
-            </div>
-            <div class="space-y-2 pt-2 border-t">
-              <label class="flex items-center gap-2">
-                <input id="filterWifi" type="checkbox" />
-                <span class="text-sm">Wi-Fi</span>
-              </label>
-              <label class="flex items-center gap-2">
-                <input id="filterPets" type="checkbox" />
-                <span class="text-sm">Pets</span>
-              </label>
-              <label class="flex items-center gap-2">
-                <input id="filterFurnished" type="checkbox" />
-                <span class="text-sm">Furnished</span>
-              </label>
-            </div>
-            <button id="applyFiltersBtn"
-                    class="w-full py-2 bg-emerald-600 text-white rounded-xl font-semibold mt-2">
-              Apply
-            </button>
-          </div>
-
-          <div class="mt-4 text-xs text-slate-500" id="favInfo"></div>
-        </div>
-
-        <!-- Список диалогов tenant'а с лендлордами -->
-        <div id="conversationsBlock" class="bg-white p-4 rounded-2xl shadow">
-          <h2 class="text-sm font-semibold text-slate-800 mb-2">My conversations</h2>
-          <div id="conversationsList" class="text-xs text-slate-700 space-y-2">
-            <p class="text-slate-500">Loading...</p>
-          </div>
-        </div>
-      </aside>
-
-      <main class="md:col-span-3 space-y-6">
-        <!-- Блок избранных -->
-        <section id="favoritesSection" class="hidden">
-          <h2 class="text-lg font-semibold text-slate-800 mb-2">My favorites</h2>
-          <div id="favoritesContainer"
-               class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          </div>
-        </section>
-
-        <!-- Общий список -->
-        <section>
-          <h2 class="text-lg font-semibold text-slate-800 mb-2">All listings</h2>
-          <div id="listingsContainer"
-               class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <p class="text-slate-500">Loading...</p>
-          </div>
-        </section>
-      </main>
+  <nav class="bg-white shadow p-4 flex justify-between items-center sticky top-0 z-50">
+    <h1 class="font-bold text-xl text-slate-800">Tenant Dashboard</h1>
+    <div class="flex gap-4 items-center">
+      <span id="userEmail" class="text-sm text-slate-500 hidden sm:block"></span>
+      <button onclick="logout()" class="text-sm font-bold text-red-600 hover:text-red-800">Log out</button>
     </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto p-6 grid md:grid-cols-4 gap-6">
+    <aside class="space-y-6">
+      <div class="bg-white p-4 rounded-xl shadow">
+        <h2 class="font-bold mb-3">Filters</h2>
+        <input id="fCity" placeholder="City" class="w-full border rounded p-2 mb-2 text-sm">
+        <input id="fMax" type="number" placeholder="Max Price" class="w-full border rounded p-2 mb-2 text-sm">
+        <button onclick="loadListings()" class="w-full bg-emerald-600 text-white rounded p-2 font-bold text-sm">Apply</button>
+      </div>
+      
+      <div class="bg-white p-4 rounded-xl shadow">
+        <h2 class="font-bold mb-2 text-emerald-700">My Favorites</h2>
+        <div id="favList" class="text-sm space-y-2 text-slate-500">Loading...</div>
+      </div>
+    </aside>
+
+    <main class="md:col-span-3">
+      <h2 class="text-2xl font-bold mb-4">Available Listings</h2>
+      <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        Loading listings...
+      </div>
+    </main>
   </div>
 
 <script>
-  const supabaseUrl = "https://zzkriumjamchjrxdxhzf.supabase.co";
-  const supabaseKey =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3JpdW1qYW1jaGpyeGR4aHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDkyNDcsImV4cCI6MjA3OTgyNTI0N30.mK7jN6En9SWhr2Avt545CIGm58Kd7ACgs8hGOe4UKMU";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-  const welcomeUserEl = document.getElementById("welcomeUser");
-  const dashboardBtnEl = document.getElementById("dashboardBtn");
-  const logoutBtnEl = document.getElementById("logoutBtn");
-  const favInfoEl = document.getElementById("favInfo");
-  const favoritesSectionEl = document.getElementById("favoritesSection");
-  const favoritesContainerEl = document.getElementById("favoritesContainer");
-  const listingsContainerEl = document.getElementById("listingsContainer");
-  const conversationsListEl = document.getElementById("conversationsList");
-
   let currentUser = null;
-  let currentProfile = null; // { role }
-  let favoritesSet = new Set(); // uuid listing_id
-  let lastLoadedListings = [];  // кеш последнего запроса (для повторного рендера после fav)
 
-  window.addEventListener("load", async () => {
-    // 1. Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    currentUser = user || null;
-
-    if (currentUser) {
-      welcomeUserEl.textContent = `Logged in as ${currentUser.email}`;
-
-      const { data: profile, error: profErr } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", currentUser.id)
-        .maybeSingle();
-
-      if (profErr) {
-        console.error("profiles error", profErr);
-      } else {
-        currentProfile = profile || null;
-      }
-
-      if (currentProfile && currentProfile.role === "landlord") {
-        dashboardBtnEl.classList.remove("hidden");
-      }
-
-      if (currentProfile && currentProfile.role === "tenant") {
-        await loadFavoritesForTenant();
-        await loadConversationsForTenant();
-      } else {
-        favoritesSet = new Set();
-        favInfoEl.textContent = "Favorites are available for tenant accounts.";
-        conversationsListEl.innerHTML =
-          '<p class="text-slate-500">Conversations list is available for tenant accounts.</p>';
-      }
-    } else {
-      welcomeUserEl.textContent = "Guest";
-      currentProfile = null;
-      favoritesSet = new Set();
-      favInfoEl.textContent = "Log in as tenant to use favorites.";
-      conversationsListEl.innerHTML =
-        '<p class="text-slate-500">Log in as tenant to see your conversations.</p>';
-    }
-
-    // 2. Logout
-    logoutBtnEl.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "index.html";
-    });
-
-    // 3. Filters
-    document.getElementById("applyFiltersBtn").onclick = loadListings;
-    document.getElementById("resetFilters").onclick = () => {
-      document.getElementById("filterCity").value = "";
-      document.getElementById("filterMaxPrice").value = "";
-      ["filterWifi", "filterPets", "filterFurnished"].forEach(id => {
-        document.getElementById(id).checked = false;
-      });
+  window.addEventListener('load', async () => {
+    if(!window.sb) return;
+    currentUser = await requireAuth();
+    if(currentUser) {
+      document.getElementById('userEmail').textContent = currentUser.email;
       loadListings();
-    };
-
-    // 4. Первичный список
-    await loadListings();
+      loadFavorites();
+    }
   });
 
-  // ---------- FAVORITES ----------
+  async function loadListings() {
+    const city = document.getElementById('fCity').value;
+    const max = document.getElementById('fMax').value;
+    const grid = document.getElementById('grid');
 
-  async function loadFavoritesForTenant() {
-    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
-      favoritesSet = new Set();
-      favInfoEl.textContent = "";
-      favoritesSectionEl.classList.add("hidden");
-      return;
-    }
+    let q = window.sb.from('listing').select('*').eq('is_active', true).order('created_at', {ascending:false});
+    if(city) q = q.ilike('city', `%${city}%`);
+    if(max) q = q.lte('price_per_month', max);
 
-    const { data, error } = await supabase
-      .from("favorites")
-      .select("listing_id")
-      .eq("user_id", currentUser.id);
+    const { data, error } = await q;
+    if(error) { grid.textContent = "Error"; return; }
+    
+    grid.innerHTML = '';
+    if(!data.length) { grid.innerHTML = '<p class="text-slate-400">No listings found.</p>'; return; }
 
-    if (error) {
-      console.error("loadFavoritesForTenant error", error);
-      favoritesSet = new Set();
-      favInfoEl.textContent = "Failed to load favorites.";
-      favoritesSectionEl.classList.add("hidden");
-      return;
-    }
-
-    favoritesSet = new Set((data || []).map(row => row.listing_id));
-    favInfoEl.textContent =
-      data && data.length
-        ? `You have ${data.length} favorite listing(s).`
-        : "You don't have favorite listings yet.";
-  }
-
-  async function toggleFavorite(listingId) {
-    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
-      alert("Only logged-in tenants can use favorites.");
-      return;
-    }
-
-    const isFavNow = favoritesSet.has(listingId);
-
-    if (!isFavNow) {
-      const { error } = await supabase
-        .from("favorites")
-        .insert([{ listing_id: listingId }]);
-
-      if (error) {
-        console.error("add favorite error", error);
-        alert(error.message || "Failed to add to favorites.");
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from("favorites")
-        .delete()
-        .eq("user_id", currentUser.id)
-        .eq("listing_id", listingId);
-
-      if (error) {
-        console.error("remove favorite error", error);
-        alert(error.message || "Failed to remove from favorites.");
-        return;
-      }
-    }
-
-    await loadFavoritesForTenant();
-    // Перерисовываем карточки на основе кеша lastLoadedListings
-    renderListings(lastLoadedListings);
-  }
-
-  // ---------- CONVERSATIONS (tenant) ----------
-
-  async function loadConversationsForTenant() {
-    if (!currentUser || !currentProfile || currentProfile.role !== "tenant") {
-      return;
-    }
-
-    conversationsListEl.innerHTML =
-      '<p class="text-slate-500">Loading...</p>';
-
-    const { data, error } = await supabase
-      .from("messages")
-      .select(`
-        id,
-        created_at,
-        message,
-        is_from_landlord,
-        is_read_by_tenant,
-        listing_id,
-        listing (
-          title,
-          city
-        )
-      `)
-      .eq("tenant_id", currentUser.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("loadConversationsForTenant error", error);
-      conversationsListEl.innerHTML =
-        `<p class="text-red-600 text-xs">${error.message || "Error loading conversations."}</p>`;
-      return;
-    }
-
-    if (!data || !data.length) {
-      conversationsListEl.innerHTML =
-        '<p class="text-slate-500">No conversations yet.</p>';
-      return;
-    }
-
-    // группировка по listing_id
-    const threadsMap = new Map();
-    data.forEach(msg => {
-      const key = msg.listing_id;
-      let thread = threadsMap.get(key);
-      if (!thread) {
-        thread = {
-          listing_id: msg.listing_id,
-          listing: msg.listing || { title: "(no title)", city: "" },
-          messages: [],
-        };
-        threadsMap.set(key, thread);
-      }
-      thread.messages.push(msg);
-    });
-
-    const threads = Array.from(threadsMap.values()).map(thread => {
-      const msgs = thread.messages;
-      msgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      const last = msgs[msgs.length - 1];
-
-      const unreadCount = msgs.filter(
-        m => m.is_from_landlord && !m.is_read_by_tenant
-      ).length;
-
-      return {
-        ...thread,
-        lastMessageAt: last.created_at,
-        lastMessageText: last.message || "",
-        unreadCount,
-      };
-    }).sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
-
-    conversationsListEl.innerHTML = "";
-
-    threads.forEach(thread => {
-      const div = document.createElement("div");
-      const dt = new Date(thread.lastMessageAt).toLocaleString();
-      const title = thread.listing.title || "(no title)";
-      const city = thread.listing.city || "";
-
-      const unreadBadge = thread.unreadCount
-        ? `<span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">${thread.unreadCount} new</span>`
-        : "";
-
-      div.className =
-        "border rounded-xl px-3 py-2 hover:bg-slate-50 cursor-pointer transition";
-
-      div.innerHTML = `
-        <div class="flex justify-between items-center">
-          <div class="font-semibold text-[11px]">
-            ${title}
-            ${city ? " · " + city : ""}
-            ${unreadBadge}
-          </div>
-          <div class="text-[10px] text-slate-400">${dt}</div>
+    data.forEach(item => {
+      const card = document.createElement('div');
+      card.className = "bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer";
+      card.onclick = () => window.location.href = `listing-details.html?id=${item.id}`;
+      card.innerHTML = `
+        <div class="h-40 bg-slate-200">
+           <img src="${item.main_photo_url || ''}" class="w-full h-full object-cover">
         </div>
-        <div class="text-[11px] text-slate-600 line-clamp-2 mt-1">
-          ${thread.lastMessageText}
+        <div class="p-4">
+           <div class="font-bold text-lg text-slate-800">$${item.price_per_month}</div>
+           <div class="font-medium truncate">${item.title}</div>
+           <div class="text-sm text-slate-500">${item.city}</div>
         </div>
       `;
-
-      div.addEventListener("click", () => {
-        window.location.href = `listing-details.html?id=${thread.listing_id}`;
-      });
-
-      conversationsListEl.appendChild(div);
+      grid.appendChild(card);
     });
   }
 
-  // ---------- СПИСОК ОБЪЯВЛЕНИЙ ----------
+  async function loadFavorites() {
+    const container = document.getElementById('favList');
+    // Получаем избранное + детали объявления
+    const { data, error } = await window.sb
+      .from('favorites')
+      .select('listing(id, title, price_per_month)')
+      .eq('user_id', currentUser.id);
 
-  async function loadListings() {
-    listingsContainerEl.innerHTML = '<p class="text-slate-500">Searching...</p>';
-
-    let query = supabase
-      .from("listing")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    const city = document.getElementById("filterCity").value.trim();
-    const maxPrice = document.getElementById("filterMaxPrice").value;
-    const wifi = document.getElementById("filterWifi").checked;
-    const pets = document.getElementById("filterPets").checked;
-    const furnished = document.getElementById("filterFurnished").checked;
-
-    if (city) query = query.ilike("city", `%${city}%`);
-    if (maxPrice) {
-      const val = parseInt(maxPrice, 10);
-      if (!Number.isNaN(val)) query = query.lte("price_per_month", val);
-    }
-    if (wifi) query = query.eq("has_wifi", true);
-    if (pets) query = query.eq("allow_pets", true);
-    if (furnished) query = query.eq("is_furnished", true);
-
-    const { data, error } = await query;
-
-    if (error || !data || !data.length) {
-      lastLoadedListings = [];
-      favoritesSectionEl.classList.add("hidden");
-      favoritesContainerEl.innerHTML = "";
-      listingsContainerEl.innerHTML =
-        '<p class="text-slate-500 col-span-full">No listings found.</p>';
+    if(error || !data || !data.length) {
+      container.innerHTML = '<p class="text-xs">No favorites yet.</p>';
       return;
     }
 
-    // кеш для повторного рендера после изменения избранного
-    lastLoadedListings = data.slice();
-    renderListings(lastLoadedListings);
-  }
-
-  function createListingCard(item, isFav) {
-    const card = document.createElement("div");
-    card.className =
-      "bg-white rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden group flex flex-col";
-
-    const imgUrl = item.main_photo_url || "https://via.placeholder.com/400x300";
-
-    card.innerHTML = `
-      <div class="h-48 overflow-hidden bg-slate-200 relative">
-        <img src="${imgUrl}"
-             class="w-full h-full object-cover group-hover:scale-105 transition">
-        <div class="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded-lg text-xs font-bold">
-          $${item.price_per_month}/mo
-        </div>
-      </div>
-      <div class="p-4 flex flex-col gap-2 flex-1">
-        <div>
-          <h3 class="font-bold text-slate-800 truncate">${item.title || "(no title)"}</h3>
-          <p class="text-sm text-slate-500">${item.city || ""}</p>
-        </div>
-        <div class="mt-auto flex gap-2">
-          <button
-            class="flex-1 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50"
-            data-action="details">
-            View Details
-          </button>
-          <button
-            class="flex-1 py-2 rounded-xl border border-emerald-600 text-sm font-semibold hover:bg-emerald-50
-                   ${isFav ? "bg-emerald-600 text-white" : "text-emerald-600"}"
-            data-action="favorite">
-            ${isFav ? "★ In favorites" : "☆ Add to favorites"}
-          </button>
-        </div>
-      </div>
-    `;
-
-    card
-      .querySelector('[data-action="details"]')
-      .addEventListener("click", (e) => {
-        e.stopPropagation();
-        window.location.href = `listing-details.html?id=${item.id}`;
-      });
-
-    card
-      .querySelector('[data-action="favorite"]')
-      .addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await toggleFavorite(item.id); // item.id — uuid, не трогаем
-      });
-
-    return card;
-  }
-
-  function renderListings(listings) {
-    // сортируем: сначала избранные, потом остальные по дате
-    const sorted = listings.slice().sort((a, b) => {
-      const af = favoritesSet.has(a.id) ? 1 : 0;
-      const bf = favoritesSet.has(b.id) ? 1 : 0;
-      if (af !== bf) return bf - af; // favs first
-      const da = new Date(a.created_at || 0).getTime();
-      const db = new Date(b.created_at || 0).getTime();
-      return db - da;
-    });
-
-    const favListings = sorted.filter(item => favoritesSet.has(item.id));
-    const otherListings = sorted.filter(item => !favoritesSet.has(item.id));
-
-    // Блок избранного
-    favoritesContainerEl.innerHTML = "";
-    if (favListings.length > 0) {
-      favoritesSectionEl.classList.remove("hidden");
-      favListings.forEach(item => {
-        const card = createListingCard(item, true);
-        favoritesContainerEl.appendChild(card);
-      });
-    } else {
-      favoritesSectionEl.classList.add("hidden");
-    }
-
-    // Основной список (всё, но уже в нужном порядке)
-    listingsContainerEl.innerHTML = "";
-    sorted.forEach(item => {
-      const isFav = favoritesSet.has(item.id);
-      const card = createListingCard(item, isFav);
-      listingsContainerEl.appendChild(card);
+    container.innerHTML = '';
+    data.forEach(row => {
+      if(!row.listing) return; // Если объявление удалено
+      const div = document.createElement('div');
+      div.className = "border-b pb-1 cursor-pointer hover:text-emerald-600";
+      div.onclick = () => window.location.href = `listing-details.html?id=${row.listing.id}`;
+      div.innerHTML = `
+        <div class="font-medium truncate">${row.listing.title}</div>
+        <div class="text-xs">$${row.listing.price_per_month}</div>
+      `;
+      container.appendChild(div);
     });
   }
 </script>
