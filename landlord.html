@@ -21,205 +21,399 @@
         </div>
         <div class="flex items-center gap-4">
           <span id="userEmail" class="text-sm text-slate-600 hidden sm:block"></span>
-          <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-800 font-medium">Log out</button>
+          <button onclick="logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Log out</button>
         </div>
       </div>
     </div>
   </nav>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-slate-800">My Listings</h2>
       <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm">+ Create Listing</button>
     </div>
 
     <div class="mb-8 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-      <h3 class="font-bold text-slate-700 mb-2">Recent Messages</h3>
-      <div id="inboxPreview" class="text-sm text-slate-500">Loading messages...</div>
+      <h3 class="font-bold text-slate-700 mb-2 flex items-center gap-2">
+        Recent Messages
+        <button onclick="loadInboxPreview()" class="text-xs text-emerald-600 font-normal hover:underline">Refresh</button>
+      </h3>
+      <div id="inboxPreview" class="text-sm text-slate-500 space-y-2 max-h-40 overflow-y-auto">
+        Loading messages...
+      </div>
     </div>
 
     <div id="listingsContainer" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div class="col-span-full text-center py-10 text-slate-500">Loading...</div>
+      <div class="col-span-full text-center py-10 text-slate-500">Loading listings...</div>
     </div>
+
   </div>
 
   <div id="listingModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl w-full max-w-2xl relative shadow-2xl flex flex-col max-h-[90vh]">
-      <div class="px-6 py-4 border-b flex justify-between items-center">
+      
+      <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
         <h3 id="modalTitle" class="font-bold text-slate-800">Edit Listing</h3>
         <button onclick="closeModal()" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
       </div>
+
       <div class="p-6 overflow-y-auto space-y-4">
         <input type="hidden" id="inpId" />
-        <input id="inpTitle" type="text" placeholder="Title" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-        <div class="grid grid-cols-2 gap-4">
-           <input id="inpCity" type="text" placeholder="City" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
-           <input id="inpPrice" type="number" placeholder="Price" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+
+        <div>
+           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+           <input id="inpTitle" type="text" placeholder="e.g. Sunny Apartment" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
         </div>
-        <textarea id="inpDesc" rows="3" placeholder="Description" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+
+        <div class="grid grid-cols-2 gap-4">
+           <div>
+             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">City</label>
+             <input id="inpCity" type="text" placeholder="City" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+           </div>
+           <div>
+             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Price ($/mo)</label>
+             <input id="inpPrice" type="number" placeholder="0" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+           </div>
+           <div class="col-span-2">
+             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deposit Amount ($)</label>
+             <input id="inpDeposit" type="number" placeholder="0 (Required by DB)" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+           </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+          <textarea id="inpDesc" rows="3" placeholder="Description" class="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
         
-        <div class="flex gap-4 border-t pt-3">
-           <label><input id="inpActive" type="checkbox"> Active</label>
-           <label><input id="inpWifi" type="checkbox"> Wifi</label>
-           <label><input id="inpPets" type="checkbox"> Pets</label>
-           <label><input id="inpFurnished" type="checkbox"> Furnished</label>
+        <div class="flex flex-wrap gap-4 border-t pt-3">
+           <label class="flex items-center gap-2 cursor-pointer"><input id="inpActive" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Active</span></label>
+           <label class="flex items-center gap-2 cursor-pointer"><input id="inpWifi" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Wi-Fi</span></label>
+           <label class="flex items-center gap-2 cursor-pointer"><input id="inpPets" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Pets</span></label>
+           <label class="flex items-center gap-2 cursor-pointer"><input id="inpFurnished" type="checkbox" class="accent-emerald-600"> <span class="text-sm">Furnished</span></label>
         </div>
 
         <div class="border-t pt-3">
-          <p class="text-xs font-bold text-slate-500 mb-2">PHOTOS (Save first to upload)</p>
-          <div id="photosContainer" class="grid grid-cols-4 gap-2"></div>
+          <p class="text-xs font-bold text-slate-500 mb-2">PHOTOS</p>
+          <div id="photosAlert" class="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-2 hidden">
+             Please save the listing first. Then you can upload photos here.
+          </div>
+          <div id="photosContainer" class="grid grid-cols-4 gap-2">
+             </div>
         </div>
-        <p id="modalStatus" class="text-center text-sm hidden"></p>
+
+        <p id="modalStatus" class="text-center text-sm hidden font-bold"></p>
       </div>
+
       <div class="px-6 py-4 border-t bg-slate-50 rounded-b-2xl flex justify-end gap-2">
-        <button onclick="closeModal()" class="px-4 py-2 border rounded-xl">Cancel</button>
-        <button onclick="saveListing()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold">Save</button>
+        <button onclick="closeModal()" class="px-4 py-2 border rounded-xl hover:bg-slate-100 text-sm font-semibold">Cancel</button>
+        <button onclick="saveListing()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700">Save Listing</button>
       </div>
     </div>
   </div>
 
+  <input type="file" id="hiddenFileInput" class="hidden" accept="image/*">
+
 <script>
-  // Используем window.sb
   let currentUser = null;
   const BUCKET = 'listing-images';
 
   window.addEventListener('load', async () => {
-    if(!window.sb) return;
-    currentUser = await requireAuth();
-    document.getElementById('userEmail').textContent = currentUser.email;
+    if(!window.sb) {
+        console.error("Supabase not found");
+        return;
+    }
     
-    // Проверка роли
-    const profile = await getCurrentProfile();
-    if (profile?.role !== 'landlord') window.location.href = 'tenant.html';
+    // Auth Check
+    const user = await requireAuth();
+    if(user) {
+        currentUser = user;
+        document.getElementById('userEmail').textContent = user.email;
+        
+        // Role Check
+        const prof = await getCurrentProfile();
+        if(prof?.role !== 'landlord') {
+            window.location.href = 'tenant.html';
+            return;
+        }
 
-    loadListings();
-    loadInboxPreview();
-    document.getElementById('logoutBtn').onclick = logout;
+        loadListings();
+        loadInboxPreview();
+    }
   });
 
+  // --- LISTINGS ---
   async function loadListings() {
     const container = document.getElementById('listingsContainer');
+    container.innerHTML = '<p class="text-slate-500 col-span-full text-center">Loading...</p>';
+
     const { data, error } = await window.sb
       .from('listing')
       .select('*')
       .eq('owner_id', currentUser.id)
       .order('created_at', {ascending: false});
 
-    if(error) { container.textContent = "Error loading"; return; }
+    if(error) {
+       container.innerHTML = `<p class="text-red-500 col-span-full">Error: ${error.message}</p>`;
+       return;
+    }
     
     container.innerHTML = '';
-    if(!data.length) container.textContent = "No listings.";
+    if(!data.length) {
+       container.innerHTML = '<p class="text-slate-400 col-span-full text-center py-10">No listings found. Create one!</p>';
+       return;
+    }
 
     data.forEach(item => {
       const card = document.createElement('div');
-      card.className = "bg-white border rounded-xl overflow-hidden hover:shadow-lg transition cursor-pointer";
-      card.onclick = () => openModal(item);
+      card.className = "bg-white border rounded-xl overflow-hidden hover:shadow-lg transition flex flex-col";
+      
+      const img = item.main_photo_url || 'https://via.placeholder.com/300x200?text=No+Photo';
+      
       card.innerHTML = `
-        <div class="h-40 bg-slate-200">
-          <img src="${item.main_photo_url || ''}" class="w-full h-full object-cover">
+        <div class="h-40 bg-slate-200 relative group cursor-pointer" onclick="openModalById('${item.id}')">
+          <img src="${img}" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center text-white font-bold">Edit Listing</div>
         </div>
-        <div class="p-3">
-          <div class="font-bold truncate">${item.title}</div>
-          <div class="text-xs text-slate-500">$${item.price_per_month} • ${item.city}</div>
-          <div class="mt-2 text-xs text-emerald-600 font-bold hover:underline" onclick="event.stopPropagation(); location.href='listing-details.html?id=${item.id}'">View Page & Chats</div>
+        <div class="p-3 flex flex-col flex-1">
+          <div class="font-bold truncate text-slate-800">${item.title}</div>
+          <div class="text-xs text-slate-500 mb-2">$${item.price_per_month} • ${item.city}</div>
+          <div class="mt-auto flex gap-2">
+             <button onclick="window.location.href='listing-details.html?id=${item.id}'" class="flex-1 py-1 border rounded text-xs hover:bg-slate-50">View Page & Chat</button>
+             <button onclick="deleteListing('${item.id}')" class="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Delete</button>
+          </div>
         </div>
       `;
       container.appendChild(card);
     });
+    
+    // Global helper for onclick
+    window.openModalById = (id) => {
+        const item = data.find(i => i.id === id);
+        openModal(item);
+    }
   }
 
+  async function deleteListing(id) {
+      if(!confirm("Delete this listing?")) return;
+      await window.sb.from('listing').delete().eq('id', id);
+      loadListings();
+  }
+
+  // --- INBOX ---
   async function loadInboxPreview() {
-    // Грузим последние сообщения
-    const { data } = await window.sb.from('messages').select('message, tenant_email, created_at').eq('is_read_by_landlord', false).limit(3);
-    const box = document.getElementById('inboxPreview');
-    if(data && data.length) {
-       box.innerHTML = data.map(m => `<div class="border-b py-1 flex justify-between"><span>${m.tenant_email}: ${m.message.substring(0,20)}...</span><span class="text-xs text-red-500">New</span></div>`).join('');
-    } else {
-       box.textContent = "No new unread messages.";
-    }
+      const box = document.getElementById('inboxPreview');
+      box.textContent = "Loading...";
+      
+      // Грузим уникальные диалоги (упрощенно: последние сообщения)
+      const { data, error } = await window.sb
+        .from('messages')
+        .select('*, listing(title)')
+        .eq('is_read_by_landlord', false)
+        .order('created_at', {ascending: false})
+        .limit(5);
+
+      if(error) { box.textContent = "Error loading messages."; return; }
+      
+      box.innerHTML = '';
+      if(!data.length) { box.textContent = "No new messages."; return; }
+
+      data.forEach(m => {
+          const div = document.createElement('div');
+          div.className = "p-2 bg-slate-50 border rounded flex justify-between cursor-pointer hover:bg-slate-100";
+          div.onclick = () => window.location.href = `listing-details.html?id=${m.listing_id}&tenant_email=${m.tenant_email || ''}`;
+          
+          div.innerHTML = `
+             <div>
+               <div class="font-bold text-xs text-emerald-700">${m.listing?.title || 'Unknown Listing'}</div>
+               <div class="text-xs text-slate-600 truncate w-48">${m.message}</div>
+             </div>
+             <div class="text-[10px] text-slate-400 self-center">From: ${m.tenant_email || 'Guest'}</div>
+          `;
+          box.appendChild(div);
+      });
   }
 
-  // --- CRUD & MODAL (Simplified for brevity but fully functional) ---
+  // --- MODAL & SAVE ---
   const modal = document.getElementById('listingModal');
-  const inpId = document.getElementById('inpId');
-  
-  window.openModal = function(item=null) {
-    modal.classList.remove('hidden'); modal.classList.add('flex');
-    if(item) {
-      inpId.value = item.id;
-      document.getElementById('inpTitle').value = item.title;
-      document.getElementById('inpCity').value = item.city;
-      document.getElementById('inpPrice').value = item.price_per_month;
-      document.getElementById('inpDesc').value = item.description;
-      document.getElementById('inpActive').checked = item.is_active;
-      renderPhotos(item);
-    } else {
-      inpId.value = '';
-      document.getElementById('inpTitle').value = '';
-      document.getElementById('photosContainer').innerHTML = 'Save to upload photos';
-    }
+  const modalStatus = document.getElementById('modalStatus');
+  const photosAlert = document.getElementById('photosAlert');
+
+  window.openModal = function(item = null) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      modalStatus.textContent = '';
+      modalStatus.classList.add('hidden');
+
+      if(item) {
+          // EDIT MODE
+          document.getElementById('modalTitle').textContent = "Edit Listing";
+          document.getElementById('inpId').value = item.id;
+          document.getElementById('inpTitle').value = item.title;
+          document.getElementById('inpCity').value = item.city;
+          document.getElementById('inpPrice').value = item.price_per_month;
+          document.getElementById('inpDeposit').value = item.deposit_amount || 0; // Загружаем депозит
+          document.getElementById('inpDesc').value = item.description;
+          document.getElementById('inpActive').checked = item.is_active;
+          document.getElementById('inpWifi').checked = item.has_wifi;
+          document.getElementById('inpPets').checked = item.allow_pets;
+          document.getElementById('inpFurnished').checked = item.is_furnished;
+          
+          photosAlert.classList.add('hidden');
+          renderPhotos(item);
+      } else {
+          // CREATE MODE
+          document.getElementById('modalTitle').textContent = "New Listing";
+          document.getElementById('inpId').value = '';
+          document.getElementById('inpTitle').value = '';
+          document.getElementById('inpCity').value = '';
+          document.getElementById('inpPrice').value = '';
+          document.getElementById('inpDeposit').value = '';
+          document.getElementById('inpDesc').value = '';
+          document.getElementById('photosContainer').innerHTML = '';
+          
+          photosAlert.classList.remove('hidden'); // Показываем "Сначала сохрани"
+      }
   }
-  window.closeModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+  window.closeModal = () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+  }
 
   window.saveListing = async function() {
-    const payload = {
-      owner_id: currentUser.id,
-      title: document.getElementById('inpTitle').value,
-      city: document.getElementById('inpCity').value,
-      price_per_month: document.getElementById('inpPrice').value,
-      description: document.getElementById('inpDesc').value,
-      is_active: document.getElementById('inpActive').checked,
-      has_wifi: document.getElementById('inpWifi').checked,
-      allow_pets: document.getElementById('inpPets').checked,
-      is_furnished: document.getElementById('inpFurnished').checked,
-    };
-    
-    let res;
-    if(inpId.value) res = await window.sb.from('listing').update(payload).eq('id', inpId.value).select().single();
-    else res = await window.sb.from('listing').insert(payload).select().single();
+      const id = document.getElementById('inpId').value;
+      const title = document.getElementById('inpTitle').value;
+      const price = document.getElementById('inpPrice').value;
+      const deposit = document.getElementById('inpDeposit').value; // Берем депозит
 
-    if(res.error) alert(res.error.message);
-    else { openModal(res.data); loadListings(); }
+      if(!title || !price) {
+          alert("Title and Price are required.");
+          return;
+      }
+
+      modalStatus.textContent = "Saving...";
+      modalStatus.className = "text-center text-sm text-slate-500 block";
+
+      const payload = {
+          owner_id: currentUser.id,
+          title: title,
+          city: document.getElementById('inpCity').value,
+          price_per_month: parseInt(price),
+          deposit_amount: deposit ? parseInt(deposit) : 0, // Если пусто, шлем 0
+          description: document.getElementById('inpDesc').value,
+          is_active: document.getElementById('inpActive').checked,
+          has_wifi: document.getElementById('inpWifi').checked,
+          allow_pets: document.getElementById('inpPets').checked,
+          is_furnished: document.getElementById('inpFurnished').checked
+      };
+
+      let result;
+      if(id) {
+          result = await window.sb.from('listing').update(payload).eq('id', id).select().single();
+      } else {
+          result = await window.sb.from('listing').insert(payload).select().single();
+      }
+
+      if(result.error) {
+          modalStatus.textContent = "Error: " + result.error.message;
+          modalStatus.className = "text-center text-sm text-red-600 block";
+      } else {
+          modalStatus.textContent = "Saved successfully!";
+          modalStatus.className = "text-center text-sm text-emerald-600 block";
+          
+          // Если создали новое, переключаем в режим редактирования, чтобы дать загрузить фото
+          if(!id) {
+              document.getElementById('inpId').value = result.data.id;
+              photosAlert.classList.add('hidden');
+              renderPhotos(result.data);
+              loadListings(); // Обновляем фон
+          } else {
+              loadListings();
+              setTimeout(closeModal, 1000);
+          }
+      }
   }
 
+  // --- PHOTOS ---
   function renderPhotos(item) {
-    const c = document.getElementById('photosContainer');
-    c.innerHTML = '';
-    ['main_photo_url','photo2_url','photo3_url','photo4_url'].forEach(k => {
-       const div = document.createElement('div');
-       div.className = "h-16 bg-slate-100 border rounded flex items-center justify-center relative overflow-hidden";
-       if(item[k]) {
-         div.innerHTML = `<img src="${item[k]}" class="w-full h-full object-cover"><button onclick="deletePhoto('${k}','${item.id}')" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">X</button>`;
-       } else {
-         div.innerHTML = `<span class="text-xl text-slate-400">+</span>`;
-         div.onclick = () => uploadPhoto(k, item.id);
-       }
-       c.appendChild(div);
-    });
+      const c = document.getElementById('photosContainer');
+      c.innerHTML = '';
+      
+      const fields = ['main_photo_url', 'photo2_url', 'photo3_url', 'photo4_url'];
+      fields.forEach(key => {
+          const div = document.createElement('div');
+          div.className = "h-20 border rounded bg-slate-50 flex items-center justify-center relative overflow-hidden group";
+          
+          if(item[key]) {
+              div.innerHTML = `
+                 <img src="${item[key]}" class="w-full h-full object-cover">
+                 <button onclick="deletePhoto('${key}', '${item.id}')" class="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">×</button>
+              `;
+          } else {
+              div.innerHTML = `<span class="text-2xl text-slate-300">+</span>`;
+              div.className += " cursor-pointer hover:border-emerald-500";
+              div.onclick = () => uploadPhotoClick(key, item.id);
+          }
+          c.appendChild(div);
+      });
   }
 
-  // --- UPLOAD HELPERS ---
-  const fileInp = document.createElement('input'); fileInp.type='file';
-  let curField, curId;
-  fileInp.onchange = async(e) => {
-    if(!e.target.files[0]) return;
-    const file = e.target.files[0];
-    const path = `${currentUser.id}/${curId}/${Date.now()}_${file.name}`;
-    await window.sb.storage.from(BUCKET).upload(path, file);
-    const {data:{publicUrl}} = window.sb.storage.from(BUCKET).getPublicUrl(path);
-    await window.sb.from('listing').update({[curField]: publicUrl}).eq('id', curId);
-    // Refresh
-    const {data} = await window.sb.from('listing').select('*').eq('id', curId).single();
-    renderPhotos(data);
-    loadListings();
+  // Скрытый инпут для файлов
+  let uploadKey = null;
+  let uploadId = null;
+  const fileInput = document.getElementById('hiddenFileInput');
+
+  function uploadPhotoClick(key, id) {
+      uploadKey = key;
+      uploadId = id;
+      fileInput.click();
   }
-  function uploadPhoto(field, id) { curField=field; curId=id; fileInp.click(); }
-  window.deletePhoto = async(field, id) => {
-     if(!confirm('Delete?')) return;
-     await window.sb.from('listing').update({[field]: null}).eq('id', id);
-     const {data} = await window.sb.from('listing').select('*').eq('id', id).single();
-     renderPhotos(data);
+
+  fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if(!file || !uploadKey || !uploadId) return;
+      
+      modalStatus.textContent = "Uploading photo...";
+      modalStatus.classList.remove('hidden');
+
+      try {
+          // 1. Upload
+          const ext = file.name.split('.').pop();
+          const path = `${currentUser.id}/${uploadId}/${Date.now()}.${ext}`;
+          
+          const { error: upErr } = await window.sb.storage.from(BUCKET).upload(path, file);
+          if(upErr) throw upErr;
+
+          // 2. Get URL
+          const { data: { publicUrl } } = window.sb.storage.from(BUCKET).getPublicUrl(path);
+
+          // 3. Update DB
+          const { error: dbErr } = await window.sb.from('listing').update({ [uploadKey]: publicUrl }).eq('id', uploadId);
+          if(dbErr) throw dbErr;
+
+          // 4. Refresh UI
+          const { data } = await window.sb.from('listing').select('*').eq('id', uploadId).single();
+          renderPhotos(data);
+          modalStatus.textContent = "Photo uploaded.";
+          loadListings();
+
+      } catch(err) {
+          console.error(err);
+          modalStatus.textContent = "Upload failed: " + err.message;
+          modalStatus.className = "text-center text-sm text-red-600 block";
+      }
+      fileInput.value = ''; // reset
   }
+
+  window.deletePhoto = async (key, id) => {
+      if(!confirm("Remove photo?")) return;
+      await window.sb.from('listing').update({[key]: null}).eq('id', id);
+      const { data } = await window.sb.from('listing').select('*').eq('id', id).single();
+      renderPhotos(data);
+      loadListings();
+  }
+
 </script>
 </body>
 </html>
